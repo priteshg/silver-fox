@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - "@expo/cli@57.0.26"
+  - "@expo/metro-runtime@57.0.16"
+  - "@expo/ui@57.0.19"
+  - expo-asset@57.0.18
+  - expo-constants@57.0.19
+  - expo-router@57.0.22
+  - expo@57.0.24
+  - prettier@3.9.8

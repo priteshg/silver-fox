@@ -1,0 +1,27 @@
+{
+  "name": "silver-fox",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Silver Fox: premium fitness and nutrition application monorepo",
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@12.4.2",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@silver-fox/web",
+    "dev:mobile": "turbo run dev --filter=@silver-fox/mobile",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.8",
+    "turbo": "2.10.13",
+    "typescript": "6.0.3"
+  }
+}

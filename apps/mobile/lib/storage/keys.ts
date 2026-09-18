@@ -1,0 +1,15 @@
+export const STORAGE_KEYS = {
+  exercises: "silverfox:exercises",
+  programs: "silverfox:programs",
+  workoutDays: "silverfox:workoutDays",
+  programExercises: "silverfox:programExercises",
+  workouts: "silverfox:workouts",
+  workoutSets: "silverfox:workoutSets",
+  activeSession: "silverfox:activeSession",
+  themePreference: "silverfox:themePreference",
+  conditioningSessions: "silverfox:conditioningSessions",
+  mobilitySessions: "silverfox:mobilitySessions",
+  bodyMeasurements: "silverfox:bodyMeasurements",
+  progressPhotos: "silverfox:progressPhotos",
+  selectedProgramId: "silverfox:selectedProgramId",
+} as const;
