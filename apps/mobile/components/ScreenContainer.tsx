@@ -18,7 +18,7 @@ export function ScreenContainer({ children, scroll = true, contentContainerStyle
   if (!scroll) {
     return (
       <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
-        <View style={[styles.content, contentContainerStyle as object]}>{children}</View>
+        <View style={[styles.content, styles.nonScrollContent, contentContainerStyle as object]}>{children}</View>
       </SafeAreaView>
     );
   }
@@ -44,6 +44,13 @@ function createStyles(theme: Theme) {
     content: {
       padding: theme.spacing.lg,
       gap: theme.spacing.lg,
+    },
+    // Without flex: 1, this View (and any ScrollView nested inside it, e.g.
+    // the workout screen's set list) has no bounded height to scroll within
+    // — its content just grows past the bottom of the safe area instead of
+    // scrolling inside it, landing underneath the Android system nav bar.
+    nonScrollContent: {
+      flex: 1,
     },
   });
 }

@@ -2,8 +2,8 @@ import type { Theme } from "@silver-fox/config";
 import { calculateTotalVolume, calculateWeeklyStreak, findMostRecentPersonalRecord } from "@silver-fox/domain";
 import { Card, useTheme } from "@silver-fox/ui";
 import { useFocusEffect, useRouter } from "expo-router";
+import { CircleUserRound } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { HeroSection, MetricCard, PrimaryCTA, ScreenContainer, SectionHeader, WeeklyOverview } from "../../components";
 import { getCurrentUserIdSync } from "../../lib/supabase/auth";
@@ -150,7 +150,7 @@ export default function Home() {
             accessibilityLabel="Your profile"
             style={styles.profileButton}
           >
-            <Ionicons name="person-circle-outline" size={28} color={theme.color.textPrimary} />
+            <CircleUserRound size={28} color={theme.color.textPrimary} strokeWidth={2} />
           </Pressable>
         }
       >

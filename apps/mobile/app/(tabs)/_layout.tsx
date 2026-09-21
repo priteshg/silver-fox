@@ -1,18 +1,24 @@
 import type { Theme } from "@silver-fox/config";
 import { useTheme } from "@silver-fox/ui";
-import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { Dumbbell, HeartPulse, Home, Library, TrendingUp, type LucideIcon } from "lucide-react-native";
 import { StyleSheet, Text, View, type ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type IoniconName = keyof typeof Ionicons.glyphMap;
-
-const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
-  index: { active: "home", inactive: "home-outline" },
-  workouts: { active: "barbell", inactive: "barbell-outline" },
-  programs: { active: "library", inactive: "library-outline" },
-  exercises: { active: "fitness", inactive: "fitness-outline" },
-  progress: { active: "trending-up", inactive: "trending-up-outline" },
+// SVG icons (react-native-svg), not font glyphs: on a confirmed real device,
+// Ionicons (a custom glyph font) rendered as a solid fallback box instead of
+// the real icon — an OS/OEM font-fallback issue (some Android skins
+// prioritize the system emoji font over a custom app font for certain
+// Unicode ranges, which font-glyph icon libraries all use) that preloading
+// the font in JS didn't fix, and that only reproduces on-device, never on
+// web. SVG rendering doesn't go through that font pipeline at all, so this
+// class of bug can't recur regardless of device/OEM.
+const TAB_ICONS: Record<string, LucideIcon> = {
+  index: Home,
+  workouts: Dumbbell,
+  programs: Library,
+  exercises: HeartPulse,
+  progress: TrendingUp,
 };
 
 /** Bar content height, excluding the safe-area bottom inset added on top of it. */
@@ -29,11 +35,11 @@ function TabIcon({
   color: ColorValue;
   styles: ReturnType<typeof createStyles>;
 }) {
-  const icons = TAB_ICONS[routeName];
-  if (!icons) return null;
+  const Icon = TAB_ICONS[routeName];
+  if (!Icon) return null;
   return (
     <View style={[styles.iconPill, focused && styles.iconPillActive]}>
-      <Ionicons name={focused ? icons.active : icons.inactive} size={22} color={color} />
+      <Icon size={22} color={color} strokeWidth={focused ? 2.4 : 2} />
     </View>
   );
 }

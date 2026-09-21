@@ -141,35 +141,39 @@ function SetRowComponent({
       </View>
 
       <View style={styles.actionRow}>
-        <View style={styles.inputRow}>
-          <WeightStepper
-            value={weight}
-            onDecrease={() => adjustWeight(-WEIGHT_STEP_KG)}
-            onIncrease={() => adjustWeight(WEIGHT_STEP_KG)}
-            disabled={completed}
-            large={prominent}
-          />
-          <NumberInput
-            label={repUnit === "seconds" ? "sec" : "reps"}
-            value={reps}
-            onChangeText={(text) => {
-              repsEdited.current = true;
-              setReps(filterAndClampDigits(text, MAX_REPS));
-            }}
-            editable={!completed}
-            large={prominent}
-          />
-          <NumberInput
-            label="RIR"
-            value={rir}
-            onChangeText={(text) => {
-              rirEdited.current = true;
-              setRir(filterAndClampDigits(text, MAX_RIR));
-            }}
-            editable={!completed}
-            optional
-            large={prominent}
-          />
+        <View style={styles.inputStack}>
+          <View style={styles.weightRow}>
+            <WeightStepper
+              value={weight}
+              onDecrease={() => adjustWeight(-WEIGHT_STEP_KG)}
+              onIncrease={() => adjustWeight(WEIGHT_STEP_KG)}
+              disabled={completed}
+              large={prominent}
+            />
+          </View>
+          <View style={styles.repsRirRow}>
+            <NumberInput
+              label={repUnit === "seconds" ? "sec" : "reps"}
+              value={reps}
+              onChangeText={(text) => {
+                repsEdited.current = true;
+                setReps(filterAndClampDigits(text, MAX_REPS));
+              }}
+              editable={!completed}
+              large={prominent}
+            />
+            <NumberInput
+              label="RIR"
+              value={rir}
+              onChangeText={(text) => {
+                rirEdited.current = true;
+                setRir(filterAndClampDigits(text, MAX_RIR));
+              }}
+              editable={!completed}
+              optional
+              large={prominent}
+            />
+          </View>
         </View>
 
         <Pressable
@@ -328,11 +332,24 @@ function createStyles(theme: Theme, prominent: boolean) {
     },
     actionRow: {
       flexDirection: "row",
-      alignItems: "flex-end",
+      alignItems: "center",
       gap: theme.spacing.sm,
     },
-    inputRow: {
+    // Weight gets its own full-width row, with reps/RIR sharing a second row
+    // below it. A single three-across row (weight stepper + reps + RIR) was
+    // measured too narrow at common phone widths (~264px available at a
+    // 360px screen) to fit two real touchTarget-sized stepper buttons
+    // alongside two text inputs without them overlapping — there wasn't a
+    // flex ratio that solved it, because the total space needed genuinely
+    // exceeded the space available. Stacking gives the stepper the full row.
+    inputStack: {
       flex: 1,
+      gap: theme.spacing.xs,
+    },
+    weightRow: {
+      flexDirection: "row",
+    },
+    repsRirRow: {
       flexDirection: "row",
       gap: theme.spacing.xs,
     },
@@ -365,18 +382,18 @@ function createStyles(theme: Theme, prominent: boolean) {
       paddingHorizontal: 2,
     },
     weightStepperButton: {
-      // Height scales with inputHeight like every other prominent control in
-      // this row, but width does not: three flex:1 columns (weight/reps/RIR)
-      // share one narrow row, and two buttons at inputHeight*0.7 wide each
-      // (up to ~39px at the "large"/prominent size) plus the value text
-      // between them doesn't fit a single column at common phone widths —
-      // confirmed directly: at 412px, the button's right edge landed ~22px
-      // inside the reps input's own bounding box, which is what made
-      // Playwright (correctly) refuse to click it as "intercepted" by that
-      // input. hitSlop={4} on the Pressable below keeps the tappable area
-      // larger than this visual box regardless.
-      width: Math.min(inputHeight * 0.7, 28),
-      height: inputHeight * 0.7,
+      // Fixed to the theme's real touch-target sizes (not a fraction of
+      // inputHeight — that formula previously landed at ~39px, still short
+      // of touchTarget.min, which is why the buttons kept feeling squashed
+      // after the first pass at this fix). Both sizes fit inside
+      // weightStepperRow's height (inputHeight): touchTarget.min (44) equals
+      // the non-prominent row height exactly, and touchTarget.comfortable
+      // (48) fits inside the prominent row's larger height (56) with room
+      // to spare. weightRow giving the stepper its own full-width row (see
+      // inputStack above) is what makes room for two real touch targets
+      // without colliding with anything else.
+      width: prominent ? theme.touchTarget.comfortable : theme.touchTarget.min,
+      height: prominent ? theme.touchTarget.comfortable : theme.touchTarget.min,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -387,6 +404,12 @@ function createStyles(theme: Theme, prominent: boolean) {
     },
     weightValue: {
       flex: 1,
+      // Explicit flexShrink: RN defaults it to 0, unlike web CSS — without
+      // this, the value text won't yield space back to the two fixed-width
+      // buttons on a narrow column, and the buttons get pushed outside the
+      // row instead of the number compressing.
+      flexShrink: 1,
+      minWidth: 0,
       textAlign: "center",
       color: theme.color.textPrimary,
       fontVariant: ["tabular-nums"],
