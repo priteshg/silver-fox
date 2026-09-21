@@ -1,7 +1,8 @@
 import type { Workout, WorkoutSet } from "@silver-fox/domain";
 import type { ExerciseId, UserId, WorkoutId, WorkoutSetId } from "@silver-fox/types";
 import { beforeEach, describe, expect, it } from "vitest";
-import { resetMockAsyncStorage } from "../../../test/mockAsyncStorage";
+import { resetFakeDb } from "../../../test/fakeSupabase";
+import { fakeSupabaseDb } from "../../../vitest.setup";
 import { createProgram, deleteProgram, updateProgramInfo } from "../programRepository";
 import { listWorkouts, listWorkoutSets, saveCompletedWorkout } from "../workoutRepository";
 
@@ -36,7 +37,7 @@ function workoutSet(id: string, workoutId: string): WorkoutSet {
 
 describe("editing or deleting a programme does not touch historical workouts", () => {
   beforeEach(() => {
-    resetMockAsyncStorage();
+    resetFakeDb(fakeSupabaseDb);
   });
 
   it("survives renaming a programme", async () => {

@@ -10,6 +10,7 @@ function exercise(overrides: Partial<Exercise> & Pick<Exercise, "id" | "name">):
     primaryMuscleGroup: "chest",
     secondaryMuscleGroups: [],
     equipment: "barbell",
+    laterality: "bilateral",
     description: "",
     instructions: [],
     formCues: [],

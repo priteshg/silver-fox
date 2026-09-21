@@ -18,7 +18,8 @@ export type ProgrammeDifficulty = "beginner" | "intermediate" | "advanced";
 
 export interface Program extends Timestamped {
   id: ProgramId;
-  ownerId: UserId;
+  /** Undefined for the built-in catalogue; set for a programme a user created. */
+  ownerId?: UserId;
   name: string;
   description?: string;
   /** The weekly structure this programme follows — drives how it's grouped in the catalogue. */

@@ -1,13 +1,6 @@
 import { z } from "zod";
 import { timestampedSchema, weightUnitSchema } from "./common";
 
-export const userSchema = timestampedSchema.extend({
-  id: z.string().min(1),
-  displayName: z.string().min(1).max(80),
-  email: z.string().email(),
-  preferredWeightUnit: weightUnitSchema,
-});
-
 export const programmeCategorySchema = z.enum(["full_body", "upper_lower", "push_pull_legs", "hybrid"]);
 
 export const programmeGoalSchema = z.enum([
@@ -24,9 +17,33 @@ export const programmeGoalSchema = z.enum([
 
 export const programmeDifficultySchema = z.enum(["beginner", "intermediate", "advanced"]);
 
+export const equipmentSchema = z.enum([
+  "barbell",
+  "dumbbell",
+  "machine",
+  "cable",
+  "bodyweight",
+  "kettlebell",
+  "band",
+  "other",
+]);
+
+export const userSchema = timestampedSchema.extend({
+  id: z.string().min(1),
+  displayName: z.string().min(1).max(80).optional(),
+  email: z.string().email().optional(),
+  age: z.number().int().min(13).max(120).optional(),
+  preferredWeightUnit: weightUnitSchema,
+  trainingExperience: programmeDifficultySchema.optional(),
+  goals: z.array(programmeGoalSchema).optional(),
+  preferredTrainingDaysPerWeek: z.number().int().min(1).max(7).optional(),
+  availableEquipment: z.array(equipmentSchema).optional(),
+  activeProgramId: z.string().min(1).optional(),
+});
+
 export const programSchema = timestampedSchema.extend({
   id: z.string().min(1),
-  ownerId: z.string().min(1),
+  ownerId: z.string().min(1).optional(),
   name: z.string().min(1).max(80),
   description: z.string().max(500).optional(),
   category: programmeCategorySchema.optional(),
@@ -65,17 +82,6 @@ export const muscleGroupSchema = z.enum([
   "full_body",
 ]);
 
-export const equipmentSchema = z.enum([
-  "barbell",
-  "dumbbell",
-  "machine",
-  "cable",
-  "bodyweight",
-  "kettlebell",
-  "band",
-  "other",
-]);
-
 export const exerciseMediaSchema = z.object({
   type: z.enum(["image", "gif", "video", "placeholder"]),
   url: z.string().optional(),
@@ -84,15 +90,33 @@ export const exerciseMediaSchema = z.object({
 
 export const exerciseDifficultySchema = z.enum(["beginner", "intermediate", "advanced"]);
 
+export const movementPatternSchema = z.enum([
+  "horizontal_push",
+  "vertical_push",
+  "horizontal_pull",
+  "vertical_pull",
+  "squat",
+  "hinge",
+  "lunge",
+  "carry",
+  "rotation",
+  "anti_rotation",
+  "isolation",
+  "other",
+]);
+
+export const lateralitySchema = z.enum(["unilateral", "bilateral"]);
+
 export const exerciseSchema = timestampedSchema.extend({
   id: z.string().min(1),
   name: z.string().min(1).max(120),
   primaryMuscleGroup: muscleGroupSchema,
   secondaryMuscleGroups: z.array(muscleGroupSchema),
   equipment: equipmentSchema,
+  laterality: lateralitySchema,
   repUnit: z.enum(["reps", "seconds"]).optional(),
   difficulty: exerciseDifficultySchema.optional(),
-  movementPattern: z.string().max(80).optional(),
+  movementPattern: movementPatternSchema.optional(),
   description: z.string().max(500),
   why: z.string().max(500).optional(),
   instructions: z.array(z.string().min(1)),
@@ -107,6 +131,7 @@ export const exerciseSchema = timestampedSchema.extend({
   recommendedRestSeconds: z.number().int().positive().optional(),
   media: exerciseMediaSchema.optional(),
   isCustom: z.boolean(),
+  ownerId: z.string().min(1).optional(),
 });
 
 export const programExerciseSchema = timestampedSchema.extend({

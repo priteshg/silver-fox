@@ -1,4 +1,4 @@
-import type { ExerciseId, Timestamped } from "@silver-fox/types";
+import type { ExerciseId, Timestamped, UserId } from "@silver-fox/types";
 import type { ExerciseMedia } from "./exerciseMedia";
 
 export type MuscleGroup =
@@ -24,6 +24,31 @@ export type Equipment =
 
 export type ExerciseDifficulty = "beginner" | "intermediate" | "advanced";
 
+/**
+ * A small, constrained set chosen for substitution matching, not academic
+ * completeness. "isolation" deliberately covers every single-joint movement
+ * regardless of which joint or muscle — that distinction is already carried
+ * by `primaryMuscleGroup`, so a second axis for it would be redundant. See
+ * EXERCISE_SUBSTITUTION_SPEC.md §4 for how every exercise in the library
+ * maps onto this list.
+ */
+export type MovementPattern =
+  | "horizontal_push"
+  | "vertical_push"
+  | "horizontal_pull"
+  | "vertical_pull"
+  | "squat"
+  | "hinge"
+  | "lunge"
+  | "carry"
+  | "rotation"
+  | "anti_rotation"
+  | "isolation"
+  | "other";
+
+/** Whether the exercise trains one side of the body at a time or both together. */
+export type Laterality = "unilateral" | "bilateral";
+
 export interface Exercise extends Timestamped {
   id: ExerciseId;
   name: string;
@@ -34,8 +59,10 @@ export interface Exercise extends Timestamped {
   repUnit?: "reps" | "seconds";
   /** How approachable the exercise is technically — not a measure of how hard it is to get sore. */
   difficulty?: ExerciseDifficulty;
-  /** The movement it belongs to, e.g. "Horizontal push", "Hip hinge", "Isolation". */
-  movementPattern?: string;
+  /** The movement it belongs to. Undefined for a custom exercise that hasn't set one — see MovementPattern. */
+  movementPattern?: MovementPattern;
+  /** Whether it trains one side at a time or both together. Defaults to bilateral for new exercises. */
+  laterality: Laterality;
   /** One or two sentences describing the exercise. */
   description: string;
   /** The coaching rationale — why this exercise earns a place in the programme. */
@@ -64,4 +91,6 @@ export interface Exercise extends Timestamped {
   media?: ExerciseMedia;
   /** False for the built-in library; true for exercises a user created. */
   isCustom: boolean;
+  /** Who created this exercise. Undefined for the built-in library. */
+  ownerId?: UserId;
 }

@@ -4,6 +4,39 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { haptics } from "../lib/haptics";
 
+/** Used when there's no previous-session weight to prefill from (first time doing this exercise) — a common "empty barbell" convention. */
+const DEFAULT_WEIGHT_KG = 20;
+// 0.5kg, not 1kg: the progression engine (loadProgression.ts) can suggest a
+// weight rounded to the nearest half kilogram (e.g. 82.5) — this control
+// needs to represent every value progression can produce, or applying a
+// suggestion would silently hand the stepper a value it could never reach
+// on its own (see PROGRESSION_LOGIC_AUDIT.md, Risk 1).
+const WEIGHT_STEP_KG = 0.5;
+const MIN_WEIGHT_KG = 0;
+const MAX_WEIGHT_KG = 500;
+
+/** Guards against floating-point drift (e.g. 20 - 0.5 - 0.5 landing on 18.999999999998) after repeated half-kilogram adjustments. */
+function roundToHalfKg(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+// Reps and RIR stay free-text (unlike weight) — typing "8" directly is a
+// more natural way to enter a rep count than clicking a stepper eight
+// times, and RIR is optional in a way that doesn't map as cleanly onto a
+// stepper's always-has-a-value shape. Structural safety comes instead from
+// filtering every keystroke to digits only and clamping the result, so a
+// letter, symbol, decimal point, or minus sign can never be typed at all —
+// closing the same class of NaN-propagation gap weight's stepper already
+// closed, by construction rather than by validating after the fact.
+export const MAX_REPS = 999;
+export const MAX_RIR = 10;
+
+export function filterAndClampDigits(text: string, max: number): string {
+  const digitsOnly = text.replace(/[^0-9]/g, "");
+  if (digitsOnly === "") return "";
+  return String(Math.min(max, Number(digitsOnly)));
+}
+
 interface SetRowProps {
   setId: string;
   setNumber: number;
@@ -38,7 +71,7 @@ function SetRowComponent({
   const theme = useTheme();
   const prominent = isNext && !completed;
   const styles = useMemo(() => createStyles(theme, prominent), [theme, prominent]);
-  const [weight, setWeight] = useState(initialWeight !== undefined ? String(initialWeight) : "");
+  const [weight, setWeight] = useState(initialWeight ?? DEFAULT_WEIGHT_KG);
   const [reps, setReps] = useState(initialReps !== undefined ? String(initialReps) : "");
   const [rir, setRir] = useState(initialRir !== undefined ? String(initialRir) : "");
 
@@ -51,7 +84,7 @@ function SetRowComponent({
   const rirEdited = useRef(false);
 
   useEffect(() => {
-    if (!weightEdited.current && initialWeight !== undefined) setWeight(String(initialWeight));
+    if (!weightEdited.current && initialWeight !== undefined) setWeight(initialWeight);
   }, [initialWeight]);
 
   useEffect(() => {
@@ -62,7 +95,14 @@ function SetRowComponent({
     if (!rirEdited.current && initialRir !== undefined) setRir(String(initialRir));
   }, [initialRir]);
 
-  const canComplete = weight.trim() !== "" && reps.trim() !== "";
+  const canComplete = reps.trim() !== "";
+
+  function adjustWeight(delta: number) {
+    if (completed) return;
+    weightEdited.current = true;
+    void haptics.light();
+    setWeight((current) => roundToHalfKg(Math.min(MAX_WEIGHT_KG, Math.max(MIN_WEIGHT_KG, current + delta))));
+  }
 
   function handleToggle() {
     if (completed) {
@@ -72,7 +112,7 @@ function SetRowComponent({
     if (!canComplete) return;
     void haptics.medium();
     onComplete(setId, {
-      weight: Number(weight),
+      weight,
       reps: Number(reps),
       rir: rir.trim() === "" ? undefined : Number(rir),
     });
@@ -102,14 +142,11 @@ function SetRowComponent({
 
       <View style={styles.actionRow}>
         <View style={styles.inputRow}>
-          <NumberInput
-            label="kg"
+          <WeightStepper
             value={weight}
-            onChangeText={(text) => {
-              weightEdited.current = true;
-              setWeight(text);
-            }}
-            editable={!completed}
+            onDecrease={() => adjustWeight(-WEIGHT_STEP_KG)}
+            onIncrease={() => adjustWeight(WEIGHT_STEP_KG)}
+            disabled={completed}
             large={prominent}
           />
           <NumberInput
@@ -117,7 +154,7 @@ function SetRowComponent({
             value={reps}
             onChangeText={(text) => {
               repsEdited.current = true;
-              setReps(text);
+              setReps(filterAndClampDigits(text, MAX_REPS));
             }}
             editable={!completed}
             large={prominent}
@@ -127,7 +164,7 @@ function SetRowComponent({
             value={rir}
             onChangeText={(text) => {
               rirEdited.current = true;
-              setRir(text);
+              setRir(filterAndClampDigits(text, MAX_RIR));
             }}
             editable={!completed}
             optional
@@ -189,6 +226,54 @@ function NumberInput({
         style={[styles.numberInput, !editable && styles.numberInputLocked]}
       />
       <Text style={styles.numberInputLabel}>{label}</Text>
+    </View>
+  );
+}
+
+/** Weight changes by a fixed 1kg step via +/- rather than free text — plates come in fixed increments, and this also rules out invalid input (letters, decimals, NaN) entirely. */
+function WeightStepper({
+  value,
+  onDecrease,
+  onIncrease,
+  disabled,
+  large,
+}: {
+  value: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  disabled: boolean;
+  large?: boolean;
+}) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme, !!large), [theme, large]);
+  return (
+    <View style={styles.numberInputContainer}>
+      <View style={[styles.weightStepperRow, disabled && styles.numberInputLocked]}>
+        <Pressable
+          onPress={onDecrease}
+          disabled={disabled || value <= MIN_WEIGHT_KG}
+          hitSlop={4}
+          accessibilityRole="button"
+          accessibilityLabel="Decrease weight"
+          style={styles.weightStepperButton}
+        >
+          <Text style={styles.weightStepperButtonLabel}>−</Text>
+        </Pressable>
+        <Text style={styles.weightValue} accessibilityLabel={`kg: ${value}`}>
+          {value}
+        </Text>
+        <Pressable
+          onPress={onIncrease}
+          disabled={disabled || value >= MAX_WEIGHT_KG}
+          hitSlop={4}
+          accessibilityRole="button"
+          accessibilityLabel="Increase weight"
+          style={styles.weightStepperButton}
+        >
+          <Text style={styles.weightStepperButtonLabel}>+</Text>
+        </Pressable>
+      </View>
+      <Text style={styles.numberInputLabel}>kg</Text>
     </View>
   );
 }
@@ -268,6 +353,45 @@ function createStyles(theme: Theme, prominent: boolean) {
     },
     numberInputLocked: {
       opacity: 0.6,
+    },
+    weightStepperRow: {
+      width: "100%",
+      height: inputHeight,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.color.surfaceElevated,
+      paddingHorizontal: 2,
+    },
+    weightStepperButton: {
+      // Height scales with inputHeight like every other prominent control in
+      // this row, but width does not: three flex:1 columns (weight/reps/RIR)
+      // share one narrow row, and two buttons at inputHeight*0.7 wide each
+      // (up to ~39px at the "large"/prominent size) plus the value text
+      // between them doesn't fit a single column at common phone widths —
+      // confirmed directly: at 412px, the button's right edge landed ~22px
+      // inside the reps input's own bounding box, which is what made
+      // Playwright (correctly) refuse to click it as "intercepted" by that
+      // input. hitSlop={4} on the Pressable below keeps the tappable area
+      // larger than this visual box regardless.
+      width: Math.min(inputHeight * 0.7, 28),
+      height: inputHeight * 0.7,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    weightStepperButtonLabel: {
+      color: theme.color.textPrimary,
+      fontWeight: "700",
+      fontSize: theme.typography.typeScale.body.fontSize,
+    },
+    weightValue: {
+      flex: 1,
+      textAlign: "center",
+      color: theme.color.textPrimary,
+      fontVariant: ["tabular-nums"],
+      fontSize: prominent ? theme.typography.typeScale.h3.fontSize : theme.typography.typeScale.body.fontSize,
+      fontWeight: "700",
     },
     numberInputLabel: {
       marginTop: 2,

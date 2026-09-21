@@ -72,28 +72,28 @@ export default function ProgramsScreen() {
           {filtered.map((program) => {
             const isActive = program.id === selectedProgramId;
             return (
-              <Pressable
-                key={program.id}
-                style={[styles.card, isActive && styles.cardActive]}
-                onPress={() => router.push(`/programs/${program.id}`)}
-                accessibilityRole="button"
-                accessibilityLabel={`View ${program.name}${isActive ? ", your active programme" : ""}`}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.programName}>{program.name}</Text>
-                  {isActive ? (
-                    <View style={styles.activeBadge}>
-                      <Text style={styles.activeBadgeLabel}>Active</Text>
-                    </View>
-                  ) : null}
-                </View>
-                {program.description ? <Text style={styles.programDescription}>{program.description}</Text> : null}
-                <Text style={styles.programMeta}>
-                  {program.category ? CATEGORY_LABELS[program.category] : "Custom"}
-                  {program.daysPerWeek ? ` · ${program.daysPerWeek}x/week` : ""}
-                  {program.estimatedSessionMinutesLow ? ` · ${program.estimatedSessionMinutesLow}-${program.estimatedSessionMinutesHigh} min` : ""}
-                  {program.difficulty ? ` · ${program.difficulty}` : ""}
-                </Text>
+              <View key={program.id} style={[styles.card, isActive && styles.cardActive]}>
+                <Pressable
+                  onPress={() => router.push(`/programs/${program.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${program.name}${isActive ? ", your active programme" : ""}`}
+                >
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.programName}>{program.name}</Text>
+                    {isActive ? (
+                      <View style={styles.activeBadge}>
+                        <Text style={styles.activeBadgeLabel}>Active</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  {program.description ? <Text style={styles.programDescription}>{program.description}</Text> : null}
+                  <Text style={styles.programMeta}>
+                    {program.category ? CATEGORY_LABELS[program.category] : "Custom"}
+                    {program.daysPerWeek ? ` · ${program.daysPerWeek}x/week` : ""}
+                    {program.estimatedSessionMinutesLow ? ` · ${program.estimatedSessionMinutesLow}-${program.estimatedSessionMinutesHigh} min` : ""}
+                    {program.difficulty ? ` · ${program.difficulty}` : ""}
+                  </Text>
+                </Pressable>
                 {!isActive ? (
                   <Pressable
                     onPress={() => void selectProgram(program.id)}
@@ -114,7 +114,7 @@ export default function ProgramsScreen() {
                     <Text style={styles.deleteLinkLabel}>Delete</Text>
                   </Pressable>
                 ) : null}
-              </Pressable>
+              </View>
             );
           })}
         </View>

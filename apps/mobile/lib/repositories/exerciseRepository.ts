@@ -1,36 +1,57 @@
 import type { Exercise } from "@silver-fox/domain";
-import { createId } from "@silver-fox/types";
-import { exercisesStorageSchema } from "@silver-fox/validation";
-import { SEED_EXERCISES } from "../../data/seedExercises";
-import { readJson, writeJson } from "../storage/asyncStore";
-import { STORAGE_KEYS } from "../storage/keys";
+import { createId, type ExerciseId } from "@silver-fox/types";
+import { getCurrentUserIdSync } from "../supabase/auth";
+import { supabase } from "../supabase/client";
+import { exerciseRowToDomain, exerciseToRow, type ExerciseRow } from "./exerciseMappers";
+
+export { exerciseRowToDomain, exerciseToRow };
 
 export async function loadExercises(): Promise<Exercise[]> {
-  const raw = await readJson(STORAGE_KEYS.exercises);
-  if (raw !== null) {
-    const parsed = exercisesStorageSchema.safeParse(raw);
-    if (parsed.success) return parsed.data as Exercise[];
-  }
-  await writeJson(STORAGE_KEYS.exercises, SEED_EXERCISES);
-  return SEED_EXERCISES;
-}
+  const [{ data: rows, error }, { data: subRows, error: subError }] = await Promise.all([
+    supabase.from("exercises").select("*").order("name"),
+    supabase.from("exercise_substitutions").select("exercise_id, substitute_exercise_id"),
+  ]);
+  if (error) throw error;
+  if (subError) throw subError;
 
-async function saveExercises(exercises: Exercise[]): Promise<void> {
-  await writeJson(STORAGE_KEYS.exercises, exercises);
+  const substitutionsByExercise = new Map<string, string[]>();
+  for (const sub of subRows ?? []) {
+    const list = substitutionsByExercise.get(sub.exercise_id) ?? [];
+    list.push(sub.substitute_exercise_id);
+    substitutionsByExercise.set(sub.exercise_id, list);
+  }
+
+  return (rows ?? []).map((row) =>
+    exerciseRowToDomain(row as ExerciseRow, substitutionsByExercise.get(row.id) ?? []),
+  );
 }
 
 export async function createExercise(
   input: Omit<Exercise, "id" | "createdAt" | "updatedAt" | "isCustom">,
 ): Promise<Exercise> {
-  const exercises = await loadExercises();
+  const ownerId = getCurrentUserIdSync();
   const now = new Date().toISOString();
   const exercise: Exercise = {
     ...input,
-    id: createId("exercise") as Exercise["id"],
+    id: createId("exercise") as ExerciseId,
     isCustom: true,
+    ownerId,
     createdAt: now,
     updatedAt: now,
   };
-  await saveExercises([...exercises, exercise]);
+
+  const { error } = await supabase.from("exercises").insert(exerciseToRow(exercise));
+  if (error) throw error;
+
+  if (exercise.substitutionExerciseIds?.length) {
+    const { error: subError } = await supabase.from("exercise_substitutions").insert(
+      exercise.substitutionExerciseIds.map((substituteExerciseId) => ({
+        exercise_id: exercise.id,
+        substitute_exercise_id: substituteExerciseId,
+      })),
+    );
+    if (subError) throw subError;
+  }
+
   return exercise;
 }

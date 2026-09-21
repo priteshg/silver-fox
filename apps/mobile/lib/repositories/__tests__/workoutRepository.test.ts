@@ -1,7 +1,8 @@
 import type { Workout, WorkoutSet } from "@silver-fox/domain";
 import type { ExerciseId, UserId, WorkoutId, WorkoutSetId } from "@silver-fox/types";
 import { beforeEach, describe, expect, it } from "vitest";
-import { resetMockAsyncStorage } from "../../../test/mockAsyncStorage";
+import { resetFakeDb } from "../../../test/fakeSupabase";
+import { fakeSupabaseDb } from "../../../vitest.setup";
 import { listWorkouts, listWorkoutSets, saveCompletedWorkout } from "../workoutRepository";
 
 const userId = "user_1" as UserId;
@@ -35,7 +36,7 @@ function workoutSet(id: string, workoutId: string): WorkoutSet {
 
 describe("workoutRepository", () => {
   beforeEach(() => {
-    resetMockAsyncStorage();
+    resetFakeDb(fakeSupabaseDb);
   });
 
   it("returns empty history when nothing has been saved", async () => {

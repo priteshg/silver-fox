@@ -7,6 +7,8 @@ interface HeroSectionProps {
   title: string;
   subtitle: string;
   children?: ReactNode;
+  /** An icon button or similar, pinned to the top-right corner of the hero. */
+  topRight?: ReactNode;
 }
 
 /**
@@ -14,7 +16,7 @@ interface HeroSectionProps {
  * ScreenContainer's side padding via negative margins so it reads as a
  * section on its own rather than another card floating in a list.
  */
-export function HeroSection({ title, subtitle, children }: HeroSectionProps) {
+export function HeroSection({ title, subtitle, children, topRight }: HeroSectionProps) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -22,6 +24,7 @@ export function HeroSection({ title, subtitle, children }: HeroSectionProps) {
     <View style={styles.bleed}>
       <View style={styles.glow} />
       <View style={styles.content}>
+        {topRight ? <View style={styles.topRight}>{topRight}</View> : null}
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
         {children ? <View style={styles.children}>{children}</View> : null}
@@ -52,6 +55,12 @@ function createStyles(theme: Theme) {
       paddingHorizontal: theme.spacing.lg,
       paddingTop: theme.spacing.xxl,
       paddingBottom: theme.spacing.lg,
+    },
+    topRight: {
+      position: "absolute",
+      top: theme.spacing.lg,
+      right: theme.spacing.lg,
+      zIndex: 1,
     },
     title: {
       fontSize: theme.typography.typeScale.hero.fontSize,

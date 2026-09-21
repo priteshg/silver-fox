@@ -23,6 +23,8 @@ export interface SessionSet {
 export interface SessionExercise {
   id: string;
   exerciseId: ExerciseId;
+  /** The exercise this slot started as, set once on the first substitution and kept stable across any later ones. Undefined until substituted. */
+  originalExerciseId?: ExerciseId;
   programExerciseId?: ProgramExerciseId;
   order: number;
   targetRepRangeLow: number;

@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetFakeDb } from "../../../../test/fakeSupabase";
 import { resetMockAsyncStorage } from "../../../../test/mockAsyncStorage";
+import { seedFakeCatalogue } from "../../../../test/seedFakeSupabase";
+import { fakeSupabaseDb } from "../../../../vitest.setup";
 import ExerciseDetailScreen from "../[exerciseId]";
 
 vi.mock("expo-router", () => ({
@@ -10,6 +13,8 @@ vi.mock("expo-router", () => ({
 describe("ExerciseDetailScreen", () => {
   beforeEach(() => {
     resetMockAsyncStorage();
+    resetFakeDb(fakeSupabaseDb);
+    seedFakeCatalogue(fakeSupabaseDb);
   });
 
   it("renders the exercise name, description, and coaching content", async () => {

@@ -8,7 +8,6 @@ import type {
   WorkoutDay,
 } from "@silver-fox/domain";
 import type { ExerciseId, ProgramExerciseId, ProgramId, WorkoutDayId } from "@silver-fox/types";
-import { LOCAL_USER_ID } from "./currentUser";
 
 const SEED_DATE = "2026-01-01T00:00:00.000Z";
 
@@ -67,7 +66,6 @@ function buildProgramme(input: ProgrammeInput): {
 } {
   const program: Program = {
     id: input.id as ProgramId,
-    ownerId: LOCAL_USER_ID,
     name: input.name,
     description: input.description,
     category: input.category,

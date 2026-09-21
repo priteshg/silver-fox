@@ -3,7 +3,12 @@ import expoConfig from "eslint-config-expo/flat.js";
 export default [
   ...expoConfig,
   {
-    ignores: ["dist/*"],
+    // playwright-report/ and test-results/ are generated Playwright output
+    // (HTML report, trace viewer assets, failure screenshots) — build
+    // artifacts, not source, and playwright-report's bundled trace-viewer
+    // JS is large enough to blow past ESLint's own defaults if it's ever
+    // linted by accident.
+    ignores: ["dist/*", "playwright-report/**", "test-results/**"],
   },
   {
     rules: {

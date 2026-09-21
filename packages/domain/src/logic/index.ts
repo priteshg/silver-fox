@@ -10,3 +10,4 @@ export * from "./weeklyOverview";
 export * from "./consistency";
 export * from "./loadProgression";
 export * from "./programmeValidation";
+export * from "./substitution";

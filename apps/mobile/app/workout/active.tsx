@@ -1,6 +1,8 @@
 import type { Theme } from "@silver-fox/config";
 import {
+  canSubstituteExercise,
   findPersonalRecords,
+  hasLoggedAnySet,
   suggestNextLoad,
   type ExerciseSessionSummary,
   type PersonalRecord,
@@ -52,6 +54,11 @@ export default function ActiveWorkoutScreen() {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [isEditingTarget, setIsEditingTarget] = useState(false);
   const [prBanner, setPrBanner] = useState<{ record: PersonalRecord; exerciseName: string } | null>(null);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
+  const [appliedSuggestion, setAppliedSuggestion] = useState<{ sessionExerciseId: string; weight: number } | null>(
+    null,
+  );
   const {
     start: startRestTimer,
     cancel: cancelRestTimer,
@@ -87,6 +94,12 @@ export default function ActiveWorkoutScreen() {
       targetRir: activeExercise.targetRir,
     });
   }, [previous, activeExercise]);
+
+  const handleApplySuggestion = useCallback(() => {
+    if (!loadSuggestion?.suggestedWeight || !activeSessionExerciseId) return;
+    void haptics.medium();
+    setAppliedSuggestion({ sessionExerciseId: activeSessionExerciseId, weight: loadSuggestion.suggestedWeight });
+  }, [loadSuggestion, activeSessionExerciseId]);
 
   const totalSets = session?.exercises.reduce((total, e) => total + e.sets.length, 0) ?? 0;
   const completedSets =
@@ -150,20 +163,43 @@ export default function ActiveWorkoutScreen() {
     );
   }
 
+  async function performFinish() {
+    setIsFinishing(true);
+    setFinishError(null);
+    try {
+      const result = await finishSession("kg");
+      if (result) {
+        router.replace(`/workout/summary?workoutId=${result.workout.id}`);
+      } else {
+        router.replace("/");
+      }
+      // No `finally` reset of isFinishing on the success path — this screen
+      // is about to be replaced, and re-enabling the button just before
+      // navigating away would let a second tap slip in during the
+      // transition.
+    } catch (err) {
+      // A failed save must never look like a successful one: stay on this
+      // screen (nothing above navigates), the logged sets are untouched
+      // (finishSession's local session persistence is only cleared after a
+      // successful save), and the person can see exactly what happened and
+      // try again — no silent failure, no lost data.
+      setFinishError(
+        err instanceof Error
+          ? `Couldn't save your workout: ${err.message}`
+          : "Couldn't save your workout. Please try again.",
+      );
+      setIsFinishing(false);
+    }
+  }
+
   function handleFinish() {
-    Alert.alert("Finish workout?", "This will save your logged sets and end the session.", [
+    if (isFinishing || !session) return;
+    const message = hasLoggedAnySet(session)
+      ? "This will save your logged sets and end the session."
+      : "You haven't logged any sets yet. Finish anyway?";
+    Alert.alert("Finish workout?", message, [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Finish",
-        onPress: async () => {
-          const result = await finishSession("kg");
-          if (result) {
-            router.replace(`/workout/summary?workoutId=${result.workout.id}`);
-          } else {
-            router.replace("/");
-          }
-        },
-      },
+      { text: "Finish", onPress: performFinish },
     ]);
   }
 
@@ -191,10 +227,24 @@ export default function ActiveWorkoutScreen() {
           <Text style={styles.dayName}>{session.dayName}</Text>
           <Text style={styles.elapsed}>{formatElapsed(elapsedSeconds)}</Text>
         </View>
-        <Pressable onPress={handleFinish} hitSlop={12} accessibilityRole="button" accessibilityLabel="Finish workout">
-          <Text style={styles.finishLabel}>Finish</Text>
+        <Pressable
+          onPress={handleFinish}
+          hitSlop={12}
+          disabled={isFinishing}
+          accessibilityRole="button"
+          accessibilityLabel="Finish workout"
+        >
+          <Text style={[styles.finishLabel, isFinishing && styles.finishLabelDisabled]}>
+            {isFinishing ? "Saving…" : "Finish"}
+          </Text>
         </Pressable>
       </View>
+
+      {finishError ? (
+        <View style={styles.finishErrorBanner} accessibilityLiveRegion="assertive">
+          <Text style={styles.finishErrorText}>{finishError}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }]} />
@@ -256,6 +306,21 @@ export default function ActiveWorkoutScreen() {
           <Text style={styles.exerciseName}>{exerciseInfo?.name ?? "Exercise"}</Text>
           {exerciseInfo?.formCues[0] ? <Text style={styles.formCue}>“{exerciseInfo.formCues[0]}”</Text> : null}
 
+          {activeExercise.originalExerciseId ? (
+            <Text style={styles.substitutedLabel}>
+              Substituted for {exercises.find((e) => e.id === activeExercise.originalExerciseId)?.name ?? "original exercise"}
+            </Text>
+          ) : null}
+          {canSubstituteExercise(activeExercise) ? (
+            <Pressable
+              onPress={() => router.push(`/workout/substitute?sessionExerciseId=${activeExercise.id}`)}
+              accessibilityRole="button"
+              accessibilityLabel="Swap exercise"
+            >
+              <Text style={styles.swapLink}>Swap exercise</Text>
+            </Pressable>
+          ) : null}
+
           <Pressable
             onPress={() => setIsEditingTarget((v) => !v)}
             accessibilityRole="button"
@@ -271,9 +336,19 @@ export default function ActiveWorkoutScreen() {
           </Pressable>
 
           {loadSuggestion?.suggestedWeight !== null && loadSuggestion ? (
-            <Text style={styles.suggestionText}>
-              Suggested: {loadSuggestion.suggestedWeight} kg — {loadSuggestion.reason}
-            </Text>
+            <Pressable
+              onPress={handleApplySuggestion}
+              accessibilityRole="button"
+              accessibilityLabel={`Apply suggested weight of ${loadSuggestion.suggestedWeight} kilograms to the next set`}
+              style={styles.suggestionRow}
+            >
+              <Text style={styles.suggestionText}>
+                Suggested: {loadSuggestion.suggestedWeight} kg — {loadSuggestion.reason}
+              </Text>
+              <Text style={styles.suggestionAction}>
+                {appliedSuggestion?.sessionExerciseId === activeSessionExerciseId ? "Applied ✓" : "Use for next set"}
+              </Text>
+            </Pressable>
           ) : null}
 
           {previous ? (
@@ -291,14 +366,28 @@ export default function ActiveWorkoutScreen() {
               value={activeExercise.targetRepRangeLow}
               min={1}
               max={50}
-              onChange={(value) => updateExerciseTarget(activeExercise.id, { targetRepRangeLow: value })}
+              // Keeps low <= high always true, the same way the standalone
+              // programme-exercise configure screen does — a rep range
+              // where low exceeds high is never valid (see the matching
+              // fix and comment in that screen's file).
+              onChange={(value) =>
+                updateExerciseTarget(activeExercise.id, {
+                  targetRepRangeLow: value,
+                  ...(value > activeExercise.targetRepRangeHigh ? { targetRepRangeHigh: value } : {}),
+                })
+              }
             />
             <Stepper
               label="Rep Target — High"
               value={activeExercise.targetRepRangeHigh}
               min={1}
               max={50}
-              onChange={(value) => updateExerciseTarget(activeExercise.id, { targetRepRangeHigh: value })}
+              onChange={(value) =>
+                updateExerciseTarget(activeExercise.id, {
+                  targetRepRangeHigh: value,
+                  ...(value < activeExercise.targetRepRangeLow ? { targetRepRangeLow: value } : {}),
+                })
+              }
             />
             <Stepper
               label="Target RIR"
@@ -323,6 +412,10 @@ export default function ActiveWorkoutScreen() {
           {activeExercise.sets.map((set) => {
             const prefill = prefillFor(previous, set.setNumber);
             const previousSet = previous?.sets.find((s) => s.order === set.setNumber);
+            const suggestionOverride =
+              set.id === nextSetId && appliedSuggestion && appliedSuggestion.sessionExerciseId === activeSessionExerciseId
+                ? appliedSuggestion.weight
+                : undefined;
             return (
               <SetRow
                 key={set.id}
@@ -335,7 +428,7 @@ export default function ActiveWorkoutScreen() {
                       }`
                     : undefined
                 }
-                initialWeight={set.weight ?? prefill.weight}
+                initialWeight={set.weight ?? suggestionOverride ?? prefill.weight}
                 initialReps={set.reps ?? prefill.reps}
                 initialRir={set.rir ?? prefill.rir}
                 repUnit={exerciseInfo?.repUnit}
@@ -390,6 +483,21 @@ function createStyles(theme: Theme) {
     finishLabel: {
       color: theme.color.accentText,
       fontWeight: "700",
+    },
+    finishLabelDisabled: {
+      opacity: 0.5,
+    },
+    finishErrorBanner: {
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.sm,
+      padding: theme.spacing.sm,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.color.danger,
+    },
+    finishErrorText: {
+      color: theme.color.background,
+      fontWeight: "600",
+      fontSize: theme.typography.typeScale.bodySmall.fontSize,
     },
     progressTrack: {
       marginHorizontal: theme.spacing.lg,
@@ -455,6 +563,17 @@ function createStyles(theme: Theme) {
       fontStyle: "italic",
       color: theme.color.textSecondary,
     },
+    substitutedLabel: {
+      marginTop: theme.spacing.xs,
+      fontSize: theme.typography.typeScale.caption.fontSize,
+      color: theme.color.textTertiary,
+    },
+    swapLink: {
+      marginTop: theme.spacing.xs,
+      fontSize: theme.typography.typeScale.bodySmall.fontSize,
+      fontWeight: "600",
+      color: theme.color.accentText,
+    },
     mediaSpacer: {
       marginBottom: theme.spacing.sm,
     },
@@ -470,11 +589,29 @@ function createStyles(theme: Theme) {
       fontSize: theme.typography.typeScale.caption.fontSize,
       color: theme.color.textTertiary,
     },
-    suggestionText: {
+    suggestionRow: {
       marginTop: theme.spacing.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: theme.spacing.sm,
+      backgroundColor: theme.color.surfaceElevated,
+      borderRadius: theme.radius.md,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      minHeight: theme.touchTarget.min,
+    },
+    suggestionText: {
+      flex: 1,
       fontSize: theme.typography.typeScale.bodySmall.fontSize,
       fontWeight: "600",
       color: theme.color.accentText,
+    },
+    suggestionAction: {
+      fontSize: theme.typography.typeScale.caption.fontSize,
+      fontWeight: "700",
+      color: theme.color.accentText,
+      textDecorationLine: "underline",
     },
     sets: {
       gap: theme.spacing.sm,

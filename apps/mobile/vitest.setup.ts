@@ -2,9 +2,24 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, vi } from "vitest";
+import { createFakeDb, createFakeSupabaseClient } from "./test/fakeSupabase";
 import { mockAsyncStorage } from "./test/mockAsyncStorage";
 
 vi.mock("@react-native-async-storage/async-storage", () => ({ default: mockAsyncStorage }));
+
+// Repository tests run against this in-memory fake instead of a live
+// Postgres connection — see test/fakeSupabase.ts. Every repository imports
+// `supabase` from "../supabase/client", which all resolve to this one
+// mocked module, so one fake db backs every repository test.
+export const fakeSupabaseDb = createFakeDb();
+vi.mock("./lib/supabase/client", () => ({ supabase: createFakeSupabaseClient(fakeSupabaseDb) }));
+
+export const TEST_USER_ID = "test-user";
+vi.mock("./lib/supabase/auth", () => ({
+  ensureSession: async () => TEST_USER_ID,
+  getCurrentUserId: async () => TEST_USER_ID,
+  getCurrentUserIdSync: () => TEST_USER_ID,
+}));
 
 // react-native-safe-area-context's real entry point isn't jsdom-safe; component
 // tests don't need real safe-area insets, so this stands in for it.

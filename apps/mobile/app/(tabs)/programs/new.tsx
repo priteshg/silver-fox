@@ -18,6 +18,9 @@ export default function NewProgramScreen() {
   const [daysPerWeek, setDaysPerWeek] = useState(3);
   const [dayNames, setDayNames] = useState<string[]>(["Push", "Pull", "Legs"]);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const NAME_MAX_LENGTH = 80; // matches the programs.name CHECK constraint (supabase/migrations/20260918213639_programs.sql)
 
   function updateDaysPerWeek(count: number) {
     setDaysPerWeek(count);
@@ -39,6 +42,7 @@ export default function NewProgramScreen() {
   async function handleSave() {
     if (!canSave || isSaving) return;
     setIsSaving(true);
+    setError(null);
     try {
       const program = await create({
         name: name.trim(),
@@ -46,6 +50,11 @@ export default function NewProgramScreen() {
         dayNames: dayNames.map((day) => day.trim()),
       });
       router.replace(`/programs/${program.id}`);
+    } catch {
+      // The DB's CHECK constraints (name length, etc.) are the source of
+      // truth; client-side maxLength below prevents the common case, but
+      // this catches anything else the server rejects so it's never silent.
+      setError(`Couldn't save this programme — check the name is ${NAME_MAX_LENGTH} characters or fewer.`);
     } finally {
       setIsSaving(false);
     }
@@ -53,7 +62,14 @@ export default function NewProgramScreen() {
 
   return (
     <ScreenContainer>
-      <TextField label="Programme Name" value={name} onChangeText={setName} placeholder="e.g. Push Pull Legs" />
+      <TextField
+        label="Programme Name"
+        value={name}
+        onChangeText={setName}
+        placeholder="e.g. Push Pull Legs"
+        maxLength={NAME_MAX_LENGTH}
+      />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <TextField
         label="Description (optional)"
         value={description}
@@ -85,6 +101,10 @@ function createStyles(theme: Theme) {
       fontWeight: theme.typography.typeScale.h3.fontWeight,
       color: theme.color.textPrimary,
       marginTop: theme.spacing.sm,
+    },
+    errorText: {
+      color: theme.color.danger,
+      fontSize: theme.typography.typeScale.caption.fontSize,
     },
   });
 }

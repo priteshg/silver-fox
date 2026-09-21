@@ -1,8 +1,10 @@
-import type { Exercise, ProgramExercise } from "@silver-fox/domain";
+import type { Exercise, ProgramExercise, WorkoutDay } from "@silver-fox/domain";
 import type { ProgramId, WorkoutDayId } from "@silver-fox/types";
 import { useCallback, useEffect, useState } from "react";
 import {
+  addDayToProgram,
   addExerciseToDay,
+  deleteDay,
   getProgramDetail,
   removeProgramExercise,
   renameDay,
@@ -92,6 +94,22 @@ export function useProgramDetail(programId: ProgramId) {
     [refresh],
   );
 
+  const addDay = useCallback(
+    async (input: { name: string; focus: WorkoutDay["focus"] }) => {
+      await addDayToProgram(programId, input);
+      await refresh();
+    },
+    [programId, refresh],
+  );
+
+  const removeDay = useCallback(
+    async (dayId: WorkoutDayId) => {
+      await deleteDay(dayId);
+      await refresh();
+    },
+    [refresh],
+  );
+
   return {
     detail,
     isLoading,
@@ -102,5 +120,7 @@ export function useProgramDetail(programId: ProgramId) {
     updateExercise,
     removeExercise,
     moveExercise,
+    addDay,
+    removeDay,
   };
 }

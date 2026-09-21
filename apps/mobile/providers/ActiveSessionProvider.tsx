@@ -4,6 +4,8 @@ import {
   createSession as domainCreateSession,
   finishSession as domainFinishSession,
   removeSet as domainRemoveSet,
+  revertSubstitution as domainRevertSubstitution,
+  substituteExercise as domainSubstituteExercise,
   uncompleteSet as domainUncompleteSet,
   updateExerciseTarget as domainUpdateExerciseTarget,
   type SessionExerciseConfig,
@@ -11,7 +13,7 @@ import {
   type WorkoutSession,
   type WorkoutSet,
 } from "@silver-fox/domain";
-import type { ProgramId, UserId, WeightUnit, WorkoutDayId } from "@silver-fox/types";
+import type { ExerciseId, ProgramId, UserId, WeightUnit, WorkoutDayId } from "@silver-fox/types";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   clearActiveSession,
@@ -47,6 +49,8 @@ interface ActiveSessionContextValue {
       restSeconds?: number;
     },
   ) => void;
+  substituteExercise: (sessionExerciseId: string, newExerciseId: ExerciseId) => void;
+  revertSubstitution: (sessionExerciseId: string) => void;
   finishSession: (weightUnit: WeightUnit) => Promise<{ workout: Workout; sets: WorkoutSet[] } | null>;
   discardSession: () => void;
 }
@@ -149,6 +153,30 @@ export function ActiveSessionProvider({ children }: { children: ReactNode }) {
     [persist],
   );
 
+  const substituteExercise = useCallback<ActiveSessionContextValue["substituteExercise"]>(
+    (sessionExerciseId, newExerciseId) => {
+      setSession((current) => {
+        if (!current) return current;
+        const next = domainSubstituteExercise(current, sessionExerciseId, newExerciseId);
+        persist(next);
+        return next;
+      });
+    },
+    [persist],
+  );
+
+  const revertSubstitution = useCallback<ActiveSessionContextValue["revertSubstitution"]>(
+    (sessionExerciseId) => {
+      setSession((current) => {
+        if (!current) return current;
+        const next = domainRevertSubstitution(current, sessionExerciseId);
+        persist(next);
+        return next;
+      });
+    },
+    [persist],
+  );
+
   const finishSession = useCallback<ActiveSessionContextValue["finishSession"]>(async (weightUnit) => {
     const current = sessionRef.current;
     if (!current) return null;
@@ -174,6 +202,8 @@ export function ActiveSessionProvider({ children }: { children: ReactNode }) {
       completeSet,
       uncompleteSet,
       updateExerciseTarget,
+      substituteExercise,
+      revertSubstitution,
       finishSession,
       discardSession,
     }),
@@ -186,6 +216,8 @@ export function ActiveSessionProvider({ children }: { children: ReactNode }) {
       completeSet,
       uncompleteSet,
       updateExerciseTarget,
+      substituteExercise,
+      revertSubstitution,
       finishSession,
       discardSession,
     ],

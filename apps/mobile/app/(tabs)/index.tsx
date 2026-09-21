@@ -3,9 +3,10 @@ import { calculateTotalVolume, calculateWeeklyStreak, findMostRecentPersonalReco
 import { Card, useTheme } from "@silver-fox/ui";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { HeroSection, MetricCard, PrimaryCTA, ScreenContainer, SectionHeader, WeeklyOverview } from "../../components";
-import { LOCAL_USER_ID } from "../../data/currentUser";
+import { getCurrentUserIdSync } from "../../lib/supabase/auth";
 import { useExerciseLibrary } from "../../hooks/useExerciseLibrary";
 import { usePhysique } from "../../hooks/usePhysique";
 import { useWeeklyOverview } from "../../hooks/useWeeklyOverview";
@@ -96,7 +97,7 @@ export default function Home() {
       existingSession: session,
       onConfirmed: () => {
         startSession({
-          userId: LOCAL_USER_ID,
+          userId: getCurrentUserIdSync(),
           programId: todaysPlan.program.id,
           workoutDayId: todaysPlan.day.id,
           dayName: todaysPlan.day.name,
@@ -125,7 +126,7 @@ export default function Home() {
       existingSession: session,
       onConfirmed: () => {
         startSession({
-          userId: LOCAL_USER_ID,
+          userId: getCurrentUserIdSync(),
           programId: programDetail.program.id,
           workoutDayId: day.day.id,
           dayName: day.day.name,
@@ -138,7 +139,21 @@ export default function Home() {
 
   return (
     <ScreenContainer>
-      <HeroSection title="Build Your Next Decade." subtitle="Strength. Muscle. Fitness. Mobility. Built for life after 40.">
+      <HeroSection
+        title="Build Your Next Decade."
+        subtitle="Strength. Muscle. Fitness. Mobility. Built for life after 40."
+        topRight={
+          <Pressable
+            onPress={() => router.push("/profile")}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Your profile"
+            style={styles.profileButton}
+          >
+            <Ionicons name="person-circle-outline" size={28} color={theme.color.textPrimary} />
+          </Pressable>
+        }
+      >
         <Text style={styles.principle}>“{principle}”</Text>
       </HeroSection>
 
@@ -260,6 +275,12 @@ export default function Home() {
 
 function createStyles(theme: Theme) {
   return StyleSheet.create({
+    profileButton: {
+      width: theme.touchTarget.comfortable,
+      height: theme.touchTarget.comfortable,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     principle: {
       fontSize: theme.typography.typeScale.body.fontSize,
       fontStyle: "italic",

@@ -1,15 +1,11 @@
+/**
+ * Only device-local state lives in AsyncStorage now — everything else (the
+ * exercise library, programmes, workout history, activity logs, the active
+ * programme) moved to Postgres when Supabase was introduced. See
+ * docs/architecture.md's "Inside apps/mobile" section for why these two
+ * specifically stay local rather than syncing.
+ */
 export const STORAGE_KEYS = {
-  exercises: "silverfox:exercises",
-  programs: "silverfox:programs",
-  workoutDays: "silverfox:workoutDays",
-  programExercises: "silverfox:programExercises",
-  workouts: "silverfox:workouts",
-  workoutSets: "silverfox:workoutSets",
   activeSession: "silverfox:activeSession",
   themePreference: "silverfox:themePreference",
-  conditioningSessions: "silverfox:conditioningSessions",
-  mobilitySessions: "silverfox:mobilitySessions",
-  bodyMeasurements: "silverfox:bodyMeasurements",
-  progressPhotos: "silverfox:progressPhotos",
-  selectedProgramId: "silverfox:selectedProgramId",
 } as const;

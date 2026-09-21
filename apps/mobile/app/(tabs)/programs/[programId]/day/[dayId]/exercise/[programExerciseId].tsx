@@ -35,6 +35,12 @@ export default function ConfigureProgramExerciseScreen() {
   const [targetRir, setTargetRir] = useState(2);
   const [restSeconds, setRestSeconds] = useState(90);
   const [initialized, setInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  function describeError(err: unknown): string {
+    return err instanceof Error ? err.message : "Something went wrong. Please try again.";
+  }
 
   useEffect(() => {
     if (initialized) return;
@@ -51,28 +57,52 @@ export default function ConfigureProgramExerciseScreen() {
     }
   }, [existing, isNew, libraryExercise, initialized]);
 
+  // A rep range where the low end exceeds the high end is never a valid
+  // target (enforced at the database level too — program_exercises'
+  // rep-range-ordered check). Previously this was silently corrected only
+  // at save time (raising a too-low "high" to match "low" with no
+  // explanation), which could show a person a nonsensical range like
+  // "10-8" right up until they saved. Coupling the two steppers keeps the
+  // displayed value always valid, with no silent surprise at save time.
+  function handleLowChange(value: number) {
+    setTargetRepRangeLow(value);
+    if (value > targetRepRangeHigh) setTargetRepRangeHigh(value);
+  }
+
+  function handleHighChange(value: number) {
+    setTargetRepRangeHigh(value);
+    if (value < targetRepRangeLow) setTargetRepRangeLow(value);
+  }
+
   async function handleSave() {
-    const repHigh = Math.max(targetRepRangeLow, targetRepRangeHigh);
-    if (isNew) {
-      if (!params.exerciseId) return;
-      await addExercise(params.dayId as WorkoutDayId, {
-        exerciseId: params.exerciseId as ProgramExercise["exerciseId"],
-        targetSets,
-        targetRepRangeLow,
-        targetRepRangeHigh: repHigh,
-        targetRir,
-        restSeconds,
-      });
-    } else if (existing) {
-      await updateExercise(existing.id, {
-        targetSets,
-        targetRepRangeLow,
-        targetRepRangeHigh: repHigh,
-        targetRir,
-        restSeconds,
-      });
+    if (isSaving) return;
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      if (isNew) {
+        if (!params.exerciseId) return;
+        await addExercise(params.dayId as WorkoutDayId, {
+          exerciseId: params.exerciseId as ProgramExercise["exerciseId"],
+          targetSets,
+          targetRepRangeLow,
+          targetRepRangeHigh,
+          targetRir,
+          restSeconds,
+        });
+      } else if (existing) {
+        await updateExercise(existing.id, {
+          targetSets,
+          targetRepRangeLow,
+          targetRepRangeHigh,
+          targetRir,
+          restSeconds,
+        });
+      }
+      router.dismissTo(`/programs/${params.programId}`);
+    } catch (err) {
+      setSaveError(describeError(err));
+      setIsSaving(false);
     }
-    router.dismissTo(`/programs/${params.programId}`);
   }
 
   function handleRemove() {
@@ -83,8 +113,13 @@ export default function ConfigureProgramExerciseScreen() {
         text: "Remove",
         style: "destructive",
         onPress: async () => {
-          await removeExercise(existing.id);
-          router.dismissTo(`/programs/${params.programId}`);
+          setSaveError(null);
+          try {
+            await removeExercise(existing.id);
+            router.dismissTo(`/programs/${params.programId}`);
+          } catch (err) {
+            setSaveError(describeError(err));
+          }
         },
       },
     ]);
@@ -97,13 +132,13 @@ export default function ConfigureProgramExerciseScreen() {
       </Card>
 
       <Stepper label="Target Sets" value={targetSets} min={1} max={10} onChange={setTargetSets} />
-      <Stepper label="Target Reps — Low" value={targetRepRangeLow} min={1} max={50} onChange={setTargetRepRangeLow} />
+      <Stepper label="Target Reps — Low" value={targetRepRangeLow} min={1} max={50} onChange={handleLowChange} />
       <Stepper
         label="Target Reps — High"
         value={targetRepRangeHigh}
         min={1}
         max={50}
-        onChange={setTargetRepRangeHigh}
+        onChange={handleHighChange}
       />
       <Stepper label="Target RIR" value={targetRir} min={0} max={10} onChange={setTargetRir} />
       <Stepper
@@ -116,8 +151,13 @@ export default function ConfigureProgramExerciseScreen() {
         suffix="sec"
       />
 
-      <Button label={isNew ? "Add to Day" : "Save Changes"} onPress={handleSave} />
-      {!isNew ? <Button label="Remove From Day" variant="secondary" onPress={handleRemove} /> : null}
+      <Button
+        label={isSaving ? "Saving…" : isNew ? "Add to Day" : "Save Changes"}
+        onPress={handleSave}
+        disabled={isSaving}
+      />
+      {!isNew ? <Button label="Remove From Day" variant="secondary" onPress={handleRemove} disabled={isSaving} /> : null}
+      {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
     </ScreenContainer>
   );
 }
@@ -128,6 +168,12 @@ function createStyles(theme: Theme) {
       fontSize: theme.typography.typeScale.h2.fontSize,
       fontWeight: theme.typography.typeScale.h2.fontWeight,
       color: theme.color.textPrimary,
+    },
+    errorText: {
+      marginTop: theme.spacing.xs,
+      textAlign: "center",
+      fontSize: theme.typography.typeScale.bodySmall.fontSize,
+      color: theme.color.danger,
     },
   });
 }

@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../../components";
-import { LOCAL_USER_ID } from "../../../data/currentUser";
+import { getCurrentUserIdSync } from "../../../lib/supabase/auth";
 import { useConditioning } from "../../../hooks/useConditioning";
 import { useMobility } from "../../../hooks/useMobility";
 import { useWorkoutHome } from "../../../hooks/useWorkoutHome";
@@ -71,7 +71,7 @@ export default function WorkoutsScreen() {
       existingSession: session,
       onConfirmed: () => {
         startSession({
-          userId: LOCAL_USER_ID,
+          userId: getCurrentUserIdSync(),
           programId: detail.program.id,
           workoutDayId: day.day.id,
           dayName: day.day.name,

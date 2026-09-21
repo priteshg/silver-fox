@@ -69,6 +69,44 @@ describe("suggestNextLoad", () => {
     expect(result.suggestedWeight).toBe(17.5);
   });
 
+  // The weight input/stepper, storage, and display all support fractional
+  // kilograms (see PROGRESSION_LOGIC_AUDIT.md, Risk 1, and
+  // components/SetRow.tsx's 0.5kg step) specifically so a suggestion like
+  // this one is always representable, never rounded away by the UI.
+  describe("fractional-weight consistency", () => {
+    it("suggests a whole-number weight when the increment lands on one", () => {
+      const result = suggestNextLoad({
+        previousSets: [
+          { weight: 80, reps: 10, rir: 2 },
+          { weight: 80, reps: 10, rir: 2 },
+          { weight: 80, reps: 10, rir: 2 },
+        ],
+        targetRepRangeLow: 6,
+        targetRepRangeHigh: 10,
+        targetRir: 2,
+        incrementKg: 5,
+      });
+      expect(result.action).toBe("increase");
+      expect(result.suggestedWeight).toBe(85);
+    });
+
+    it("suggests a fractional weight (82.5 kg) when the increment doesn't land on a whole number", () => {
+      const result = suggestNextLoad({
+        previousSets: [
+          { weight: 80, reps: 10, rir: 2 },
+          { weight: 80, reps: 10, rir: 2 },
+          { weight: 80, reps: 10, rir: 2 },
+        ],
+        targetRepRangeLow: 6,
+        targetRepRangeHigh: 10,
+        targetRir: 2,
+        incrementKg: 2.5,
+      });
+      expect(result.action).toBe("increase");
+      expect(result.suggestedWeight).toBe(82.5);
+    });
+  });
+
   it("never suggests a negative weight", () => {
     const result = suggestNextLoad({
       previousSets: [{ weight: 1, reps: 2, rir: 0 }],

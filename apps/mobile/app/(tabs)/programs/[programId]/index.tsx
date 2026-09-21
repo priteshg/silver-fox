@@ -1,16 +1,26 @@
 import type { Theme } from "@silver-fox/config";
-import { estimateWorkoutDurationMinutes, type ProgramExercise } from "@silver-fox/domain";
+import { estimateWorkoutDurationMinutes, type ProgramExercise, type StrengthFocus } from "@silver-fox/domain";
 import { Button, Card, useTheme } from "@silver-fox/ui";
-import type { ProgramId } from "@silver-fox/types";
+import type { ProgramId, WorkoutDayId } from "@silver-fox/types";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Chip, ReorderableRow, ScreenContainer, TextField } from "../../../../components";
 import { useProgramDetail } from "../../../../hooks/useProgramDetail";
 import { useProgramList } from "../../../../hooks/useProgramList";
 import { buildSessionExercises, confirmAndStart } from "../../../../lib/startWorkout";
-import { LOCAL_USER_ID } from "../../../../data/currentUser";
+import { getCurrentUserIdSync } from "../../../../lib/supabase/auth";
 import { useActiveSession } from "../../../../providers/ActiveSessionProvider";
+
+const FOCUS_OPTIONS: { value: StrengthFocus; label: string }[] = [
+  { value: "push", label: "Push" },
+  { value: "pull", label: "Pull" },
+  { value: "legs", label: "Legs" },
+  { value: "upper", label: "Upper" },
+  { value: "lower", label: "Lower" },
+  { value: "full_body", label: "Full Body" },
+  { value: "other", label: "Other" },
+];
 
 const GOAL_LABELS: Record<string, string> = {
   build_muscle: "Build muscle",
@@ -29,15 +39,24 @@ export default function ProgramDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { programId } = useLocalSearchParams<{ programId: string }>();
-  const { detail, isLoading, refresh, updateInfo, removeExercise, moveExercise } = useProgramDetail(
-    programId as ProgramId,
-  );
+  const { detail, isLoading, refresh, updateInfo, removeExercise, moveExercise, addDay, removeDay } =
+    useProgramDetail(programId as ProgramId);
   const { selectedProgramId, selectProgram, refresh: refreshProgramList } = useProgramList();
   const { session, startSession } = useActiveSession();
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [isAddingDay, setIsAddingDay] = useState(false);
+  const [newDayName, setNewDayName] = useState("");
+  const [newDayFocus, setNewDayFocus] = useState<StrengthFocus>("full_body");
+  const [isSavingDay, setIsSavingDay] = useState(false);
+  const [isSavingInfo, setIsSavingInfo] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  function describeError(err: unknown): string {
+    return err instanceof Error ? err.message : "Something went wrong. Please try again.";
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -70,8 +89,16 @@ export default function ProgramDetailScreen() {
   }
 
   async function saveEditing() {
-    await updateInfo({ name: name.trim(), description: description.trim() || undefined });
-    setIsEditing(false);
+    setActionError(null);
+    setIsSavingInfo(true);
+    try {
+      await updateInfo({ name: name.trim(), description: description.trim() || undefined });
+      setIsEditing(false);
+    } catch (err) {
+      setActionError(describeError(err));
+    } finally {
+      setIsSavingInfo(false);
+    }
   }
 
   function handleStartDay() {
@@ -80,7 +107,7 @@ export default function ProgramDetailScreen() {
       existingSession: session,
       onConfirmed: () => {
         startSession({
-          userId: LOCAL_USER_ID,
+          userId: getCurrentUserIdSync(),
           programId: detail!.program.id,
           workoutDayId: activeDay.day.id,
           dayName: activeDay.day.name,
@@ -94,12 +121,59 @@ export default function ProgramDetailScreen() {
   function handleRemoveExercise(programExerciseId: ProgramExercise["id"], exerciseName: string) {
     Alert.alert("Remove exercise", `Remove "${exerciseName}" from ${activeDay?.day.name}?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => void removeExercise(programExerciseId) },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          setActionError(null);
+          removeExercise(programExerciseId).catch((err) => setActionError(describeError(err)));
+        },
+      },
+    ]);
+  }
+
+  async function handleAddDay() {
+    if (!newDayName.trim() || isSavingDay) return;
+    setActionError(null);
+    setIsSavingDay(true);
+    try {
+      await addDay({ name: newDayName.trim(), focus: newDayFocus });
+      setNewDayName("");
+      setNewDayFocus("full_body");
+      setIsAddingDay(false);
+    } catch (err) {
+      setActionError(describeError(err));
+    } finally {
+      setIsSavingDay(false);
+    }
+  }
+
+  function handleRemoveDay(dayId: WorkoutDayId, dayName: string) {
+    if (detail!.days.length <= 1) {
+      Alert.alert("Can't remove this day", "A programme needs at least one training day.");
+      return;
+    }
+    Alert.alert("Remove day", `Remove "${dayName}" and every exercise in it? This can't be undone.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          setSelectedDayId(null);
+          setActionError(null);
+          removeDay(dayId).catch((err) => setActionError(describeError(err)));
+        },
+      },
     ]);
   }
 
   return (
     <ScreenContainer>
+      {actionError ? (
+        <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
+          <Text style={styles.errorBannerText}>{actionError}</Text>
+        </View>
+      ) : null}
       {isEditing ? (
         <Card elevated>
           <TextField label="Programme Name" value={name} onChangeText={setName} />
@@ -107,8 +181,8 @@ export default function ProgramDetailScreen() {
           <TextField label="Description" value={description} onChangeText={setDescription} multiline />
           <View style={styles.spacer} />
           <View style={styles.editActions}>
-            <Button label="Cancel" variant="secondary" onPress={() => setIsEditing(false)} />
-            <Button label="Save" onPress={saveEditing} />
+            <Button label="Cancel" variant="secondary" onPress={() => setIsEditing(false)} disabled={isSavingInfo} />
+            <Button label={isSavingInfo ? "Saving…" : "Save"} onPress={saveEditing} disabled={isSavingInfo} />
           </View>
         </Card>
       ) : (
@@ -177,7 +251,37 @@ export default function ProgramDetailScreen() {
             onPress={() => setSelectedDayId(d.day.id)}
           />
         ))}
+        {detail.program.isCustom ? (
+          <Chip label="+ Add Day" selected={false} onPress={() => setIsAddingDay((v) => !v)} />
+        ) : null}
       </ScrollView>
+
+      {isAddingDay ? (
+        <Card>
+          <TextField label="Day Name" value={newDayName} onChangeText={setNewDayName} placeholder="e.g. Upper Body" />
+          <View style={styles.spacer} />
+          <Text style={styles.focusLabel}>Focus</Text>
+          <View style={styles.focusRow}>
+            {FOCUS_OPTIONS.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                selected={newDayFocus === option.value}
+                onPress={() => setNewDayFocus(option.value)}
+              />
+            ))}
+          </View>
+          <View style={styles.spacer} />
+          <View style={styles.editActions}>
+            <Button label="Cancel" variant="secondary" onPress={() => setIsAddingDay(false)} />
+            <Button
+              label={isSavingDay ? "Adding…" : "Add Day"}
+              onPress={handleAddDay}
+              disabled={!newDayName.trim() || isSavingDay}
+            />
+          </View>
+        </Card>
+      ) : null}
 
       {activeDay ? (
         <View style={styles.dayContent}>
@@ -188,6 +292,16 @@ export default function ProgramDetailScreen() {
                 <Text style={styles.dayMeta}>
                   {activeDay.exercises.length} exercises · ~{activeDayDuration} min
                 </Text>
+              ) : null}
+              {detail.program.isCustom ? (
+                <Pressable
+                  onPress={() => handleRemoveDay(activeDay.day.id, activeDay.day.name)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${activeDay.day.name}`}
+                >
+                  <Text style={styles.removeDayLabel}>Remove day</Text>
+                </Pressable>
               ) : null}
             </View>
             <Button label="Start" onPress={handleStartDay} disabled={activeDay.exercises.length === 0} />
@@ -207,8 +321,14 @@ export default function ProgramDetailScreen() {
                     pe.tempo ? ` · tempo ${pe.tempo}` : ""
                   }${pe.restSeconds ? ` · ${pe.restSeconds}s rest` : ""}`}
                   onPress={() => router.push(`/programs/${detail.program.id}/day/${activeDay.day.id}/exercise/${pe.id}`)}
-                  onMoveUp={() => void moveExercise(activeDay.day.id, index, index - 1)}
-                  onMoveDown={() => void moveExercise(activeDay.day.id, index, index + 1)}
+                  onMoveUp={() => {
+                    setActionError(null);
+                    moveExercise(activeDay.day.id, index, index - 1).catch((err) => setActionError(describeError(err)));
+                  }}
+                  onMoveDown={() => {
+                    setActionError(null);
+                    moveExercise(activeDay.day.id, index, index + 1).catch((err) => setActionError(describeError(err)));
+                  }}
                   canMoveUp={index > 0}
                   canMoveDown={index < activeDay.exercises.length - 1}
                   onRemove={() => handleRemoveExercise(pe.id, pe.exercise.name)}
@@ -334,6 +454,33 @@ function createStyles(theme: Theme) {
     },
     list: {
       gap: theme.spacing.sm,
+    },
+    focusLabel: {
+      fontSize: theme.typography.typeScale.bodySmall.fontSize,
+      fontWeight: "600",
+      color: theme.color.textSecondary,
+    },
+    focusRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
+    },
+    removeDayLabel: {
+      marginTop: theme.spacing.xs,
+      fontSize: theme.typography.typeScale.caption.fontSize,
+      fontWeight: "600",
+      color: theme.color.danger,
+    },
+    errorBanner: {
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.color.danger,
+      padding: theme.spacing.sm,
+    },
+    errorBannerText: {
+      fontSize: theme.typography.typeScale.bodySmall.fontSize,
+      color: theme.color.background,
+      textAlign: "center",
     },
   });
 }

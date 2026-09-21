@@ -1,5 +1,6 @@
 import {
   createId,
+  type ExerciseId,
   type ProgramId,
   type UserId,
   type WeightUnit,
@@ -166,4 +167,40 @@ export function finishSession(
 
 export function hasLoggedAnySet(session: WorkoutSession): boolean {
   return session.exercises.some((exercise) => exercise.sets.some((set) => set.completed));
+}
+
+/** Once a set is logged against a slot, swapping the exercise underneath it would mix two exercises' data into one history record — see EXERCISE_SUBSTITUTION_SPEC.md §7. */
+export function canSubstituteExercise(exercise: SessionExercise): boolean {
+  return !exercise.sets.some((set) => set.completed);
+}
+
+/**
+ * Swaps which exercise a session slot is performing, without touching the
+ * programme it came from — `programExerciseId` is untouched, and nothing
+ * about a `ProgramExercise` is read or written here. `originalExerciseId` is
+ * set only the first time, so re-substituting still remembers the exercise
+ * the slot actually started as. No-ops once any set has been completed for
+ * this slot (see `canSubstituteExercise`).
+ */
+export function substituteExercise(
+  session: WorkoutSession,
+  sessionExerciseId: string,
+  newExerciseId: ExerciseId,
+): WorkoutSession {
+  return mapExercise(session, sessionExerciseId, (exercise) => {
+    if (!canSubstituteExercise(exercise)) return exercise;
+    return {
+      ...exercise,
+      originalExerciseId: exercise.originalExerciseId ?? exercise.exerciseId,
+      exerciseId: newExerciseId,
+    };
+  });
+}
+
+/** Restores a slot to the exercise it started as, undoing any substitution made this session. */
+export function revertSubstitution(session: WorkoutSession, sessionExerciseId: string): WorkoutSession {
+  return mapExercise(session, sessionExerciseId, (exercise) => {
+    if (!exercise.originalExerciseId || !canSubstituteExercise(exercise)) return exercise;
+    return { ...exercise, exerciseId: exercise.originalExerciseId, originalExerciseId: undefined };
+  });
 }

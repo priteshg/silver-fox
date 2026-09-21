@@ -76,23 +76,36 @@ packages/types
 
 ## Inside `apps/mobile`
 
-There is no backend yet, so this app also owns local persistence. Layers,
-top to bottom:
+Postgres (via Supabase) is the source of truth for everything except two
+deliberately device-local exceptions. Layers, top to bottom:
 
 ```
-app/                    Expo Router screens — thin: render + call hooks
+app/                    Expo Router screens — thin: render + call hooks.
+                         app/_layout.tsx also hosts SessionGate, which blocks
+                         rendering until the Supabase session bootstraps.
 providers/               ActiveSessionProvider — the one piece of truly
                          global state (a workout in progress), because it
                          must survive navigating away and back
 hooks/                   Per-screen data hooks (usePrograms, useExerciseLibrary,
                          useProgramDetail, useWorkoutHistory, useRestTimer):
                          load from a repository, expose CRUD + refresh
-lib/repositories/        AsyncStorage-backed CRUD for each collection
-                         (programs+days+programExercises, exercises,
-                         workouts+sets); validates on read via
-                         @silver-fox/validation, seeds from data/ on first run
-lib/storage/             Thin AsyncStorage JSON get/set/remove wrapper
-data/                    Seed exercise library + a starter programme
+lib/repositories/        Supabase-backed CRUD for each collection (programs+
+                         sessions+programExercises, exercises, workouts+sets,
+                         conditioning, mobility, body measurements, progress
+                         photos); *Mappers.ts files hold the pure row<->domain
+                         conversion, kept free of any Supabase import so
+                         plain scripts (the seed generator) and unit tests
+                         can use them without a live or mocked connection
+lib/supabase/            client.ts (the supabase-js singleton, reading
+                         EXPO_PUBLIC_SUPABASE_URL/ANON_KEY) and auth.ts
+                         (anonymous sign-in bootstrap + the current user id)
+lib/storage/             Thin AsyncStorage JSON get/set/remove wrapper —
+                         now used only for the two device-local exceptions
+                         below, not for anything Postgres owns
+data/                    Seed exercise library + programme catalogue —
+                         still the one authored place for their *content*;
+                         scripts/generateSeedSql.ts turns them into
+                         supabase/seed.sql rather than seeding AsyncStorage
 components/              App-specific UI (SetRow, RestTimerBar, Stepper, ...)
                          built from packages/ui + packages/config, not
                          promoted to packages/ui since nothing outside this
@@ -100,11 +113,47 @@ components/              App-specific UI (SetRow, RestTimerBar, Stepper, ...)
 ```
 
 Screens don't call repositories directly; they go through a hook, so a
-screen never needs to know whether data lives in AsyncStorage, SQLite, or a
-future Supabase client. The active workout session is the one exception to
-"reload on focus": it's global Context, persisted to storage on every
-change, so it survives leaving the screen, backgrounding the app, or a full
-reload — see `providers/ActiveSessionProvider.tsx`.
+screen never needs to know whether data lives in Postgres or AsyncStorage.
+Two things are deliberately **not** in Postgres, because they're per-device
+UI state rather than data: the active workout session (survives
+backgrounding/reload via `providers/ActiveSessionProvider.tsx`, persisted to
+AsyncStorage on every change) and the selected-programme preference. Both
+would be meaningless to sync across devices and add nothing by living in the
+database.
+
+### Auth
+
+There's no login screen yet, so every device gets a real Supabase Auth
+identity via anonymous sign-in (`lib/supabase/auth.ts`), persisted across
+restarts through the same AsyncStorage-backed session storage supabase-js
+uses everywhere. `app/_layout.tsx`'s `SessionGate` blocks the whole app
+behind that one bootstrap call so no repository ever races an unauthenticated
+client. This is what gives Row Level Security a genuine `auth.uid()` to key
+on; upgrading an anonymous session to real credentials later
+(`supabase.auth.linkIdentity`) keeps the same user id and all of its data.
+
+### Database (`supabase/`)
+
+```
+supabase/migrations/    Hand-written SQL migrations (schema + RLS policies),
+                         applied in filename order via the Supabase CLI
+supabase/seed.sql       Generated — do not hand-edit. Regenerate with
+                         `pnpm --filter @silver-fox/mobile generate-seed`
+                         after changing data/seedExercises.ts or
+                         data/programmeCatalogue.ts, then re-apply with
+                         `supabase db reset` (local) or `supabase db push`
+                         + `psql "$SUPABASE_DB_URL" -f supabase/seed.sql` (remote)
+supabase/tests/database/  pgTAP tests for constraints and RLS, run via
+                         `supabase test db` (needs Docker for the local stack)
+```
+
+Every table a client can read is governed by a Row Level Security policy:
+built-in reference data (the exercise library, the programme catalogue,
+recipes once that lands) is world-readable; anything a user creates
+(a custom programme, a custom exercise, workout history, body measurements)
+is scoped to `owner_id`/`user_id = auth.uid()`. The anon key embedded in the
+client is safe to ship — RLS, not secrecy of that key, is what protects the
+data. See [data-model.md](./data-model.md) for the schema itself.
 
 ### Workout session state
 
@@ -129,17 +178,18 @@ dependencies are always built before it is.
 
 ## Data flow
 
-Today (no backend yet): a screen collects input → a repository in
-`apps/mobile/lib/repositories` constructs/updates a plain domain object from
-`packages/domain` and persists it to AsyncStorage, validating anything read
-back via a Zod schema from `packages/validation` → a hook re-renders the
-screen from the updated data. Business rules (e.g. how volume or estimated
-1RM is calculated) live in `packages/domain`, never duplicated in a screen
-or component.
+A screen collects input → a repository in `apps/mobile/lib/repositories`
+constructs/updates a plain domain object from `packages/domain`, maps it to
+a Postgres row shape, and persists it via the `supabase-js` client → a hook
+re-renders the screen from the updated data. Business rules (e.g. how volume
+or estimated 1RM is calculated, or per-exercise load progression) live in
+`packages/domain`, never duplicated in a screen, component, or the database
+itself — Postgres enforces structural integrity (required fields, valid
+ranges, valid references) via CHECK/FK constraints, but never business logic.
 
-Once Supabase is introduced, only the repository layer changes (AsyncStorage
-calls become Supabase calls); domain objects, validation, and screens should
-not need to change.
+This was in fact the one and only layer that changed when Supabase replaced
+AsyncStorage as the source of truth: domain objects, validation schemas, and
+every screen were untouched, exactly as originally planned.
 
 ## Keeping this maintainable
 

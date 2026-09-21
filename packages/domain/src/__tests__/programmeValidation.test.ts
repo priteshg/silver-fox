@@ -23,6 +23,7 @@ function exercise(id: string): Exercise {
     primaryMuscleGroup: "chest",
     secondaryMuscleGroups: [],
     equipment: "barbell",
+    laterality: "bilateral",
     description: "test",
     instructions: [],
     formCues: [],

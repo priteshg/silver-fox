@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { listWorkouts, listWorkoutSets } from "../../lib/repositories/workoutRepository";
 import { loadActiveSession } from "../../lib/repositories/sessionRepository";
+import { resetFakeDb } from "../../test/fakeSupabase";
 import { resetMockAsyncStorage } from "../../test/mockAsyncStorage";
+import { fakeSupabaseDb } from "../../vitest.setup";
 import { ActiveSessionProvider, useActiveSession } from "../ActiveSessionProvider";
 
 const userId = "user_1" as UserId;
@@ -23,6 +25,7 @@ async function renderReady() {
 describe("ActiveSessionProvider", () => {
   beforeEach(() => {
     resetMockAsyncStorage();
+    resetFakeDb(fakeSupabaseDb);
   });
 
   it("has no active session when storage is empty", async () => {

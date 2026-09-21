@@ -12,3 +12,4 @@ export type ConditioningSessionId = Id<"ConditioningSessionId">;
 export type MobilitySessionId = Id<"MobilitySessionId">;
 export type BodyMeasurementId = Id<"BodyMeasurementId">;
 export type ProgressPhotoId = Id<"ProgressPhotoId">;
+export type MediaAssetId = Id<"MediaAssetId">;
