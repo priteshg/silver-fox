@@ -1,12 +1,12 @@
 Feature: Following a training programme
   In order to know what training to do
-  As someone using Silverfox
+  As someone using PrimeForm
   I want to choose and manage the training programme I follow
 
-  Rule: A person can follow one of Silverfox's built-in programmes
+  Rule: A person can follow one of PrimeForm's built-in programmes
 
     Scenario: Choosing a built-in programme
-      Given Silverfox offers a built-in programme called "Foundation 40+"
+      Given PrimeForm offers a built-in programme called "Foundation 40+"
       When I make "Foundation 40+" my programme
       Then "Foundation 40+" is the programme I am following
 
@@ -35,7 +35,7 @@ Feature: Following a training programme
   Rule: A built-in programme cannot be changed or removed by a person
 
     Scenario: Built-in programmes cannot be removed
-      Given Silverfox offers a built-in programme called "Foundation 40+"
+      Given PrimeForm offers a built-in programme called "Foundation 40+"
       When I look at "Foundation 40+"
       Then I am not offered a way to remove it
 

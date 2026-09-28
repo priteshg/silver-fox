@@ -2,5 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  // e2e-dist/ is the static web export the e2e suite's webServer builds and
+  // serves (playwright.config.ts) — a generated, minified production
+  // bundle, not source; tsc otherwise tries to type-check it directly and
+  // crashes (RangeError: Maximum call stack size exceeded) on its size.
+  "exclude": ["node_modules", "e2e-dist", "dist"]
 }

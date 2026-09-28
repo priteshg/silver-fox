@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Silver Fox",
-  description: "Premium fitness and nutrition tracking.",
+  title: "PrimeForm",
+  description: "PrimeForm — training that adapts as you do.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

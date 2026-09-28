@@ -1,4 +1,4 @@
-# Silverfox — Foundation Decisions
+# PrimeForm — Foundation Decisions
 
 This document exists because two parts of the prior foundation review were reconsidered rather than simply confirmed, plus one architectural correction was surfaced during that reconsideration. Only decisions with a genuine choice are listed — nothing here restates something already settled beyond dispute in `PRODUCT_FOUNDATION.md` or `AUTH_AND_STATE_MODEL.md`.
 
@@ -55,7 +55,7 @@ This wasn't a product decision so much as an architectural correction the review
 
 **WHY**: Treating Demo as a peer of "logged out" and "authenticated" in one flat enum implies, incorrectly, that it's a backend-recognisable condition — which risks exactly the kind of accidental complexity (a demo flag creeping into a Supabase call, a demo-aware RLS policy someone adds "just in case") that `AUTH_AND_STATE_MODEL.md` already argued against. Naming the two layers separately makes the correct rule impossible to get wrong by accident: **nothing about Demo is ever sent to Supabase**, because Demo isn't a state Supabase's layer has any vocabulary for in the first place.
 
-This also resolves a related requirement precisely: **session expiry** should be handled by listening for Supabase's own `onAuthStateChange` event transitioning `authenticated → no_session` (e.g. a refresh failure), and reacting by setting Client View Mode to `logged_out` — not `demo`. A person whose session silently expired should land on the plain "what Silverfox does" screen, not accidentally re-enter the walkthrough.
+This also resolves a related requirement precisely: **session expiry** should be handled by listening for Supabase's own `onAuthStateChange` event transitioning `authenticated → no_session` (e.g. a refresh failure), and reacting by setting Client View Mode to `logged_out` — not `demo`. A person whose session silently expired should land on the plain "what PrimeForm does" screen, not accidentally re-enter the walkthrough.
 
 One further consequence worth naming: `app.json`'s `scheme: "silverfox"` (already present, currently unused by any code) becomes genuinely necessary once password reset is in scope, since Supabase's reset-password email needs a deep link back into the app to land the person on a "set new password" screen. This is a small, real, previously-invisible piece of implementation cost.
 
@@ -105,7 +105,7 @@ Sufficiently defined, with no further product input needed, to move straight to 
 - "Use this programme" / "Start fresh" at account creation (Decision 1), implemented as a small extension of the existing create-programme insert path.
 - Reps/RIR validation brought up to the weight field's standard, and the rep-range-backwards behaviour changed to reject-with-explanation (Stage 5, unchanged).
 - The one-line fix to round a suggested weight to the nearest whole kilogram before it's ever offered (`PROGRESSION_LOGIC_AUDIT.md`, Risk 1), folded into Stage 5.
-- BDD respecification of `starting_silverfox.feature`, a new `demo_experience.feature`, and confirmation that `data_privacy.feature` is now genuinely automatable with two real accounts (Stage 7, unchanged).
+- BDD respecification of `starting_primeform.feature`, a new `demo_experience.feature`, and confirmation that `data_privacy.feature` is now genuinely automatable with two real accounts (Stage 7, unchanged).
 
 ## Still unresolved
 
@@ -128,4 +128,4 @@ Unchanged in shape from `CORE_IMPLEMENTATION_PLAN.md`, with Stage 0 now complete
 7. Stage 6 — **removed from the near-term plan** (Decision 2) — exercise metadata work waits until substitution is actually scheduled.
 8. Stage 7 (renumbered from 7, unchanged in content) — BDD respecification.
 
-Each stage still leaves Silverfox in a usable, demoable state at its end, exactly as `CORE_IMPLEMENTATION_PLAN.md` originally required.
+Each stage still leaves PrimeForm in a usable, demoable state at its end, exactly as `CORE_IMPLEMENTATION_PLAN.md` originally required.

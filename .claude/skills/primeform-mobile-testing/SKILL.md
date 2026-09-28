@@ -1,22 +1,22 @@
 ---
-name: silverfox-mobile-testing
+name: primeform-mobile-testing
 description: >-
-  Silverfox-specific Android/mobile device testing approach — why browser
+  PrimeForm-specific Android/mobile device testing approach — why browser
   viewport emulation is not sufficient proof, what real-device concerns
   matter (safe-area/system-nav overlap, touch targets, keyboard behaviour),
   and how to triage a mobile-only failure. Use this whenever testing or
   debugging something on a real phone or emulator, investigating a
   mobile-only bug that doesn't reproduce in the browser/web preview,
   deciding whether a UI issue needs device testing at all, or setting up
-  Android testing infrastructure for Silverfox. Trigger on phrases like
+  Android testing infrastructure for PrimeForm. Trigger on phrases like
   "test this on my phone", "the nav bar is cut off", "set up an emulator",
   "this looks fine in the browser but not on my device", "mobile smoke
   test", even without the word "Android".
 ---
 
-# Silverfox Mobile Testing
+# PrimeForm Mobile Testing
 
-Silverfox's real product is the Expo/React Native app in `apps/mobile`
+PrimeForm's real product is the Expo/React Native app in `apps/mobile`
 (`apps/web` is a separate design-system showcase with no product screens —
 `CURRENT_STATE.md` §1). The app also runs as an Expo web build, which is
 what this project's Playwright suite and the Claude Browser tool's mobile
@@ -46,7 +46,7 @@ safe-area/system-nav-related — escalate to a real device or emulator.
 - Business-logic-driven UI behaviour (does the right screen render, does a
   save show an error, does a form validate) — the existing Playwright suite
   (`apps/mobile/e2e/journeys/`) and the Claude Browser tool's mobile preset
-  cover this well; see the `silverfox-quality-engineering` skill for layer
+  cover this well; see the `primeform-quality-engineering` skill for layer
   selection generally.
 - Layout math that's genuinely viewport-driven (does the tab bar's own
   bounding box fit the viewport) — `navigation.spec.ts`'s "the bottom tab
@@ -79,9 +79,11 @@ safe-area/system-nav-related — escalate to a real device or emulator.
   sane. None of this is meaningfully observable through a headless/browser
   Playwright run.
 - **Real portrait dimensions and OS chrome** across actual device sizes, not
-  just the `android-pixel-7`/`desktop-chromium` Playwright projects
-  (`apps/mobile/playwright.config.ts`), which emulate viewport + touch +
-  UA but not real OS-level system bars.
+  just the `mobile`/`desktop-chromium` Playwright projects
+  (`apps/mobile/playwright.config.ts` — `mobile` runs only tests tagged
+  `@mobile`; everything else runs once, on `desktop-chromium`, since most of
+  this suite is genuinely viewport-independent), which emulate viewport +
+  touch + UA but not real OS-level system bars.
 
 ## Setting up device testing
 
@@ -104,7 +106,7 @@ because a browser can't substitute for.
 ## Smoke journeys, not a full mirror of Playwright
 
 Do not duplicate the entire Playwright suite on a device — per
-`silverfox-quality-engineering`, that's the wrong layer for anything not
+`primeform-quality-engineering`, that's the wrong layer for anything not
 specifically device-dependent. A small, high-value device smoke pass
 covers: launch → logged-out welcome screen renders correctly → start
 today's workout → the bottom tab bar and every icon/label are fully visible
@@ -124,7 +126,7 @@ device-specific selector strategy.
 
 ## Failure triage
 
-Same discipline as `silverfox-quality-engineering`, with one more category:
+Same discipline as `primeform-quality-engineering`, with one more category:
 **device/emulator issue** (a real device quirk, an emulator rendering
 artifact, a stale Metro bundle on the phone) distinct from an application
 defect. Before concluding a mobile-only difference is a real bug, rule out:

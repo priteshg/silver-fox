@@ -8,18 +8,18 @@ Feature: Substituting an exercise during a workout
     Scenario: Substitute an unavailable exercise
       Given today's workout contains Bench Press
       When I choose to substitute the exercise
-      Then Silverfox shows suitable alternatives
+      Then PrimeForm shows suitable alternatives
 
     Scenario: Home equipment limits which alternatives are shown
       Given I am training at home
       And I only have dumbbells available
       When I request an alternative to Bench Press
-      Then Silverfox only recommends alternatives that use dumbbells or bodyweight
+      Then PrimeForm only recommends alternatives that use dumbbells or bodyweight
 
     Scenario: No suitable alternative exists
       Given I only have equipment that trains a different muscle group entirely
       When I request an alternative to Bench Press
-      Then Silverfox tells me no suitable alternative was found
+      Then PrimeForm tells me no suitable alternative was found
 
   Rule: Substitution preserves the programme
 

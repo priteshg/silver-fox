@@ -54,7 +54,7 @@ const bySeverity = (sev: Severity) => findings.filter((f) => f.severity === sev)
 const specCounts = results ? countSpecs(results.suites) : { total: 0, passed: 0, failed: 0 };
 
 const lines: string[] = [];
-lines.push("# Silver Fox — Flow Agent Report");
+lines.push("# PrimeForm — Flow Agent Report");
 lines.push("");
 lines.push(`Generated: ${new Date().toISOString()}`);
 lines.push("");

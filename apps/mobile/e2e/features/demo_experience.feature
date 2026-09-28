@@ -1,12 +1,12 @@
-Feature: Trying Silverfox before creating an account
-  In order to understand what Silverfox looks like before committing to it
-  As someone who has never used Silverfox before
+Feature: Trying PrimeForm before creating an account
+  In order to understand what PrimeForm looks like before committing to it
+  As someone who has never used PrimeForm before
   I want to explore a realistic example of it without creating an account
 
   Rule: Anyone can enter the demo without creating an account
 
     Scenario: Entering the demo
-      Given I have never used Silverfox before
+      Given I have never used PrimeForm before
       When I choose to see a demo
       Then I see an example programme, workouts, and progress
       And it is clearly labelled as a demo
@@ -16,7 +16,7 @@ Feature: Trying Silverfox before creating an account
     Scenario: Leaving the demo without creating an account
       Given I am looking at the demo
       When I go back
-      Then I am shown what Silverfox does, not my training data
+      Then I am shown what PrimeForm does, not my training data
       And nothing from the demo is associated with me
 
   Rule: Someone who likes the demo programme can create an account and keep it

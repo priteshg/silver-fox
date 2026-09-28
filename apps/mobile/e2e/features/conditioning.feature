@@ -1,6 +1,6 @@
 Feature: Logging conditioning and mobility work
   In order to keep a complete record of my training, not just strength work
-  As someone using Silverfox
+  As someone using PrimeForm
   I want to log cardio and mobility sessions separately from my strength workouts
 
   Rule: A person can log a cardio session

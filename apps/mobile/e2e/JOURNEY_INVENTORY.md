@@ -1,4 +1,4 @@
-# Silver Fox — E2E Journey Inventory
+# PrimeForm — E2E Journey Inventory
 
 Produced by direct inspection of `apps/mobile/app/**` (every route), the
 repositories each screen calls, and the Postgres schema those repositories

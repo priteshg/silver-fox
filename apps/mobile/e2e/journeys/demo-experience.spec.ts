@@ -17,17 +17,20 @@ test.use({ storageState: { cookies: [], origins: [] } });
  * worker fixture's page, which already waited for a definitive "app ready"
  * signal (support/fixtures.ts's sharedPage) before any test ever touches
  * it. This file's tests are each the very first interaction on a brand-new,
- * cold page load, and on `android-pixel-7` specifically that first click can
- * land a beat before React's event handlers finish attaching — confirmed
- * directly: the same click dispatched via the DOM's own `.click()` instead
- * of a simulated pointer event renders the demo screen correctly every
- * time, so this is a hydration-timing race in the test, not a product bug.
- * Waiting for network idle before the first click closes that window.
+ * cold page load, where that first click can in principle land a beat
+ * before React's event handlers finish attaching — a hydration-timing race
+ * in the test, not a product bug (confirmed directly: a raw DOM `.click()`
+ * instead of a simulated pointer event renders the demo screen correctly
+ * every time). `waitForLoadState("load")` — not `"networkidle"` — is the
+ * fix: it ties this wait to a real, one-time browser lifecycle event
+ * (window `load`), not an indirect, open-ended "no network activity for a
+ * while" heuristic that has no actual connection to whether React has
+ * finished attaching its listeners, and is slower for no benefit here.
  */
 async function goToWelcomeScreen(page: Page) {
   await page.goto("/");
-  await expect(page.getByText("Silverfox", { exact: true })).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("PrimeForm", { exact: true })).toBeVisible();
+  await page.waitForLoadState("load");
 }
 
 test.describe("Demo experience", () => {
@@ -62,9 +65,7 @@ test.describe("Demo experience", () => {
     await expect(page.getByText("DEMO — example data, not saved")).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole("button", { name: "Back" }).click();
-    await expect(
-      page.getByText("Follow a training programme, log your workouts, and see your progress over time."),
-    ).toBeVisible();
+    await expect(page.getByText("Training that adapts as you do.")).toBeVisible();
     // Exact match — "See a demo" (the welcome screen's own button label)
     // contains "demo" too, and getByText's default substring match is
     // case-insensitive, so a loose match here would wrongly flag the

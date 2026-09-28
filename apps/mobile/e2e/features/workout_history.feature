@@ -1,6 +1,6 @@
 Feature: Reviewing workout history
   In order to see the training I have actually done
-  As someone using Silverfox
+  As someone using PrimeForm
   I want to look back at my finished workouts
 
   Rule: A finished workout appears in workout history
@@ -32,7 +32,7 @@ Feature: Reviewing workout history
 
   Rule: Workout history is still there after I leave and come back
 
-    Scenario: Workout history survives returning to Silverfox
+    Scenario: Workout history survives returning to PrimeForm
       Given I have finished a workout of "Push"
-      When I close and reopen Silverfox
+      When I close and reopen PrimeForm
       Then I still see that workout in my history

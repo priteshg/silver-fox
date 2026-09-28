@@ -73,7 +73,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     async ({ browser }, use, workerInfo) => {
       // Manually creating the context (instead of using Playwright's built-in
       // `context`/`page` fixtures) means the project's device config
-      // (viewport, mobile emulation for android-pixel-7) isn't auto-applied —
+      // (viewport, mobile emulation for mobile) isn't auto-applied —
       // merge it in explicitly. `project.use` also carries test-runner-only
       // options (actionTimeout, navigationTimeout, screenshot, trace, video)
       // that aren't valid BrowserContext constructor options — pull those
@@ -84,8 +84,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         ...contextOptions,
         storageState: storageStatePathFor(workerInfo.workerIndex),
       });
-      context.setDefaultTimeout(actionTimeout ?? 15_000);
-      context.setDefaultNavigationTimeout(navigationTimeout ?? 60_000);
+      context.setDefaultTimeout(actionTimeout ?? 5_000);
+      context.setDefaultNavigationTimeout(navigationTimeout ?? 10_000);
       // Playwright's own test runner auto-starts tracing on any context
       // (not just its built-in fixtures) when `trace` is configured — the
       // per-test start/stopChunk in readyPage is what scopes a trace file to
@@ -127,7 +127,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       // navigations, or (if this goto were removed entirely) a SecurityError
       // clearing localStorage on a still-blank page that's never navigated.
       await page.goto("/");
-      await page.getByText("Your Training Week").waitFor({ timeout: 20_000 });
+      await page.getByText("Your Training Week").waitFor({ timeout: 10_000 });
       await use(page);
       await page.close();
     },
@@ -159,7 +159,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     // SessionGate shows "Connecting..." then either the Home screen or an
     // error card; waiting for a Home-only landmark is the real "app ready"
     // signal, not just "the page responded".
-    await expect(sharedPage.getByText("Your Training Week")).toBeVisible({ timeout: 20_000 });
+    await expect(sharedPage.getByText("Your Training Week")).toBeVisible({ timeout: 10_000 });
 
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright's own fixture `use`, not React's use()
     await use(sharedPage);

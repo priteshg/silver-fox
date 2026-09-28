@@ -2,7 +2,7 @@ import type { Theme } from "@silver-fox/config";
 import { calculateTotalVolume, findMostRecentPersonalRecord, suggestNextLoad, type PersonalRecord } from "@silver-fox/domain";
 import { Button, Card, ErrorState, useTheme } from "@silver-fox/ui";
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   DEMO_PROFILE,
   DEMO_PROGRAM_DETAIL,
@@ -10,11 +10,15 @@ import {
   DEMO_WORKOUT_SETS,
   findProgramExercise,
 } from "../lib/demo/demoData";
+import { requestPasswordReset } from "../lib/supabase/auth";
 import { useAuth } from "../providers/AuthProvider";
 import { ScreenContainer } from "./ScreenContainer";
 import { TextField } from "./TextField";
 
-type Screen = "welcome" | "sign_up" | "sign_in" | "demo";
+type Screen = "welcome" | "sign_up" | "sign_in" | "forgot_password" | "demo";
+
+/** Same shape a `<TextInput keyboardType="email-address">` nudges toward, not a full RFC 5322 parser — just enough to catch an obviously malformed address before it reaches Supabase. */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function exerciseNameFor(exerciseId: string): string {
   return (
@@ -62,15 +66,18 @@ export function AuthFlow() {
   }
 
   if (screen === "sign_up") return <SignUpScreen onBack={() => setScreen("welcome")} fromDemo={cameFromDemo} />;
-  if (screen === "sign_in") return <SignInScreen onBack={() => setScreen("welcome")} />;
+  if (screen === "sign_in") {
+    return (
+      <SignInScreen onBack={() => setScreen("welcome")} onForgotPassword={() => setScreen("forgot_password")} />
+    );
+  }
+  if (screen === "forgot_password") return <ForgotPasswordScreen onBack={() => setScreen("sign_in")} />;
 
   return (
     <ScreenContainer>
       <View style={styles.hero}>
-        <Text style={styles.title}>Silverfox</Text>
-        <Text style={styles.subtitle}>
-          Follow a training programme, log your workouts, and see your progress over time.
-        </Text>
+        <Text style={styles.title}>PrimeForm</Text>
+        <Text style={styles.subtitle}>Training that adapts as you do.</Text>
       </View>
       <View style={styles.actions}>
         <Button label="See a demo" onPress={enterDemo} variant="secondary" />
@@ -170,7 +177,7 @@ function DemoScreen({ onLeave, onCreateAccount }: { onLeave: () => void; onCreat
       </Card>
 
       <View style={styles.actions}>
-        <Button label="Create your own Silverfox" onPress={onCreateAccount} />
+        <Button label="Create your own PrimeForm account" onPress={onCreateAccount} />
         <Button label="Back" onPress={onLeave} variant="secondary" />
       </View>
     </ScreenContainer>
@@ -270,9 +277,17 @@ function SignUpScreen({ onBack, fromDemo }: { onBack: () => void; fromDemo: bool
   );
 }
 
-function SignInScreen({ onBack }: { onBack: () => void }) {
+function SignInScreen({ onBack, onForgotPassword }: { onBack: () => void; onForgotPassword: () => void }) {
   const { signIn } = useAuth();
-  return <CredentialsForm title="Sign in" submitLabel="Sign in" onSubmit={signIn} onBack={onBack} />;
+  return (
+    <CredentialsForm
+      title="Sign in"
+      submitLabel="Sign in"
+      onSubmit={signIn}
+      onBack={onBack}
+      onForgotPassword={onForgotPassword}
+    />
+  );
 }
 
 function CredentialsForm<T>({
@@ -281,6 +296,7 @@ function CredentialsForm<T>({
   onSubmit,
   onBack,
   onSuccess,
+  onForgotPassword,
 }: {
   title: string;
   submitLabel: string;
@@ -288,6 +304,8 @@ function CredentialsForm<T>({
   onBack: () => void;
   /** Called with the resolved value after a successful submit — lets the caller distinguish outcomes (e.g. signed-in vs. confirmation-required) without this generic form needing to know about them. */
   onSuccess?: (result: T) => void;
+  /** Sign-in only — sign-up has no "forgotten" password yet to reset. */
+  onForgotPassword?: () => void;
 }) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -334,6 +352,11 @@ function CredentialsForm<T>({
         secureTextEntry
         editable={!isSubmitting}
       />
+      {onForgotPassword ? (
+        <Pressable onPress={onForgotPassword} disabled={isSubmitting} accessibilityRole="button">
+          <Text style={styles.forgotPasswordLink}>Forgot password?</Text>
+        </Pressable>
+      ) : null}
       {error ? <ErrorState title="Couldn't complete that" description={error} onRetry={handleSubmit} /> : null}
       <View style={styles.actions}>
         <Button
@@ -342,6 +365,83 @@ function CredentialsForm<T>({
           disabled={!canSubmit}
         />
         <Button label="Back" onPress={onBack} variant="secondary" disabled={isSubmitting} />
+      </View>
+    </ScreenContainer>
+  );
+}
+
+function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const trimmedEmail = email.trim();
+  const emailIsValid = EMAIL_PATTERN.test(trimmedEmail);
+  const canSubmit = trimmedEmail.length > 0 && !isSubmitting;
+
+  async function handleSubmit() {
+    if (!canSubmit) return;
+    if (!emailIsValid) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await requestPasswordReset(trimmedEmail);
+      // Shown regardless of whether this address has an account — see
+      // requestPasswordReset's own doc comment for why that's deliberate.
+      setEmailSent(true);
+    } catch (err) {
+      // A genuine failure to even attempt the request (network down, rate
+      // limited) — distinct from "this email isn't registered", which never
+      // reaches here because Supabase doesn't report that difference.
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (emailSent) {
+    return (
+      <ScreenContainer>
+        <Text style={styles.title}>Check your email</Text>
+        {/* Deliberately generic — never echoes back or varies on whether
+            trimmedEmail actually has an account; see requestPasswordReset's
+            own doc comment for why that distinction must never be exposed. */}
+        <Text style={styles.subtitle}>
+          If an account exists for this email, we&apos;ll send you a password reset link.
+        </Text>
+        <View style={styles.actions}>
+          <Button label="Back to sign in" onPress={onBack} />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  return (
+    <ScreenContainer>
+      <Text style={styles.title}>Reset your password</Text>
+      <Text style={styles.subtitle}>Enter your email and we&apos;ll send you a link to reset your password.</Text>
+      <TextField
+        label="Email"
+        value={email}
+        onChangeText={(text) => {
+          setEmail(text);
+          if (error) setError(null);
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        editable={!isSubmitting}
+      />
+      {error ? <ErrorState title="Couldn't send that" description={error} onRetry={handleSubmit} /> : null}
+      <View style={styles.actions}>
+        <Button label={isSubmitting ? "Sending…" : "Send reset link"} onPress={handleSubmit} disabled={!canSubmit} />
+        <Button label="Back to sign in" onPress={onBack} variant="secondary" disabled={isSubmitting} />
       </View>
     </ScreenContainer>
   );
@@ -361,6 +461,12 @@ function createStyles(theme: Theme) {
     subtitle: {
       fontSize: theme.typography.typeScale.body.fontSize,
       color: theme.color.textSecondary,
+    },
+    forgotPasswordLink: {
+      fontSize: theme.typography.typeScale.bodySmall.fontSize,
+      fontWeight: "600",
+      color: theme.color.accentText,
+      textAlign: "right",
     },
     actions: {
       gap: theme.spacing.sm,

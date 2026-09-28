@@ -2,7 +2,7 @@
 
 ## Visual direction
 
-Silver Fox should feel like a premium, professional instrument:
+PrimeForm should feel like a premium, professional instrument:
 
 - **Dark-first.** The dark palette is the primary (and currently only)
   theme. A light theme can be added later as a second palette behind the

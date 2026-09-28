@@ -1,4 +1,4 @@
-# Silverfox — Progression Logic Audit
+# PrimeForm — Progression Logic Audit
 
 Investigation only. Nothing in this document has been changed, fixed, or built. Every claim below is traced to a specific file and line, not inferred from naming or prior documentation — the prior reference to this capability (`apps/mobile/e2e/JOURNEY_INVENTORY.md`, journey #8: "Progressive overload suggestion — display and tap-to-apply") was treated as a lead to verify, not a fact to repeat.
 
@@ -6,7 +6,7 @@ Investigation only. Nothing in this document has been changed, fixed, or built. 
 
 ## CURRENT BEHAVIOUR
 
-While performing a workout, for whichever exercise is currently active, Silverfox looks at that exercise's most recent prior session and — if one exists — shows a single line: **"Suggested: {weight} kg — {reason}"**, with a tap action labelled "Use for next set." Tapping it pre-fills the weight for the next not-yet-logged set of that exercise with the suggested number. It does not touch reps or RIR, does not affect any other exercise, and does not persist anywhere — it is recomputed fresh every time the screen renders, from that exercise's history at that moment.
+While performing a workout, for whichever exercise is currently active, PrimeForm looks at that exercise's most recent prior session and — if one exists — shows a single line: **"Suggested: {weight} kg — {reason}"**, with a tap action labelled "Use for next set." Tapping it pre-fills the weight for the next not-yet-logged set of that exercise with the suggested number. It does not touch reps or RIR, does not affect any other exercise, and does not persist anywhere — it is recomputed fresh every time the screen renders, from that exercise's history at that moment.
 
 Separately, and unrelated to weight suggestions: Home's "today's training day" (which day of the programme is presented as "today") rotates through the programme's days in a fixed order based on which day was last completed — this is also sometimes described loosely as "next workout" logic, but it has nothing to do with load progression. Documented here only to avoid the two being conflated, since the audit's own search terms ("next workout") match both.
 
@@ -44,7 +44,7 @@ Three files, cleanly separated by responsibility:
 
 **3. Does authentication change affect this logic?** No, and this is worth stating with confidence rather than leaving as an open question: the logic only ever consumes `workouts`/`workout_sets`, already correctly RLS-scoped to whoever is authenticated. Nothing about the proposed logged-out/demo/authenticated model changes how or whether this feature works for a real authenticated person.
 
-**4. Does it affect the core workout model or the proposed foundational work?** Indirectly, in one specific way: `PRODUCT_FOUNDATION.md`'s concrete definition of what Demo should contain (a reused built-in programme, a handful of fabricated workouts, one personal record) did not consider whether Demo should *also* demonstrate this suggestion feature. Given it's a real, working, differentiating capability, deliberately excluding it from a walkthrough meant to show "what Silverfox looks like" would undersell the product it's supposed to demonstrate — see the recommendation below.
+**4. Does it affect the core workout model or the proposed foundational work?** Indirectly, in one specific way: `PRODUCT_FOUNDATION.md`'s concrete definition of what Demo should contain (a reused built-in programme, a handful of fabricated workouts, one personal record) did not consider whether Demo should *also* demonstrate this suggestion feature. Given it's a real, working, differentiating capability, deliberately excluding it from a walkthrough meant to show "what PrimeForm looks like" would undersell the product it's supposed to demonstrate — see the recommendation below.
 
 ## RECOMMENDATION
 

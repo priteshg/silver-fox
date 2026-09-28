@@ -162,7 +162,7 @@ export default function NewExerciseScreen() {
 
       <View>
         <Text style={styles.label}>Movement Pattern (Optional)</Text>
-        <Text style={styles.hint}>Helps Silverfox suggest this as a substitute for similar exercises.</Text>
+        <Text style={styles.hint}>Helps PrimeForm suggest this as a substitute for similar exercises.</Text>
         <View style={styles.chipRow}>
           {MOVEMENT_PATTERN_OPTIONS.map((option) => (
             <Chip

@@ -42,3 +42,5 @@ Thumbs.db
 # supabase
 supabase/.branches/
 supabase/.temp/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

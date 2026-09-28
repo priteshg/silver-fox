@@ -1,6 +1,6 @@
-# Silverfox — Product Foundation
+# PrimeForm — Product Foundation
 
-This document defines what Silverfox fundamentally is at this stage, before any new feature work resumes. It is a planning document — nothing described as PROPOSED has been built. Detail on the auth/session mechanics lives in `AUTH_AND_STATE_MODEL.md`; the staged build-out lives in `CORE_IMPLEMENTATION_PLAN.md`. This document is the "why" and "what"; those two are the "how" and "when."
+This document defines what PrimeForm fundamentally is at this stage, before any new feature work resumes. It is a planning document — nothing described as PROPOSED has been built. Detail on the auth/session mechanics lives in `AUTH_AND_STATE_MODEL.md`; the staged build-out lives in `CORE_IMPLEMENTATION_PLAN.md`. This document is the "why" and "what"; those two are the "how" and "when."
 
 ---
 
@@ -15,11 +15,11 @@ Full detail in `CURRENT_STATE.md`. The load-bearing facts for this document:
 
 ---
 
-## What Silverfox should fundamentally be at this stage
+## What PrimeForm should fundamentally be at this stage
 
-**Silverfox is a small, honest training-log product**: a person follows a programme made of named training days, each day lists exercises with a target, they perform a workout and record what they actually did (weight, repetitions, and optionally effort), and Silverfox keeps an accurate, private history of that so progress and personal records are visible over time. That's it. It is not yet a coaching product, an adaptive product, or a social product — those are all explicitly deferred (see below).
+**PrimeForm is a small, honest training-log product**: a person follows a programme made of named training days, each day lists exercises with a target, they perform a workout and record what they actually did (weight, repetitions, and optionally effort), and PrimeForm keeps an accurate, private history of that so progress and personal records are visible over time. That's it. It is not yet a coaching product, an adaptive product, or a social product — those are all explicitly deferred (see below).
 
-The one meaningful addition this milestone makes to that definition is **a real boundary between looking at Silverfox and using it** — today that boundary doesn't exist (see `AUTH_AND_STATE_MODEL.md` for the full argument), and establishing it properly is treated as more foundational than any further workout-logging feature, because every other piece of this document depends on knowing whose data something is.
+The one meaningful addition this milestone makes to that definition is **a real boundary between looking at PrimeForm and using it** — today that boundary doesn't exist (see `AUTH_AND_STATE_MODEL.md` for the full argument), and establishing it properly is treated as more foundational than any further workout-logging feature, because every other piece of this document depends on knowing whose data something is.
 
 ---
 
@@ -29,21 +29,21 @@ The one meaningful addition this milestone makes to that definition is **a real 
 
 Three states, cleanly separated, with **no backend identity created until a person deliberately creates an account**:
 
-1. **Logged out** — no account exists yet. Sees what Silverfox is and can enter Demo. No data is written anywhere.
-2. **Demo** — a realistic, clearly-labelled, read-mostly walkthrough of what a lived-in Silverfox looks like. Entirely local to the device; never touches the real backend; cannot be mistaken for, or mixed with, a real account.
+1. **Logged out** — no account exists yet. Sees what PrimeForm is and can enter Demo. No data is written anywhere.
+2. **Demo** — a realistic, clearly-labelled, read-mostly walkthrough of what a lived-in PrimeForm looks like. Entirely local to the device; never touches the real backend; cannot be mistaken for, or mixed with, a real account.
 3. **Authenticated** — a real person with real credentials, real data, correctly isolated from every other authenticated person.
 
 ### The first-use journey
 
 ```
 LOGGED OUT
-  "Silverfox helps you follow a programme, log your workouts, and see your progress."
+  "PrimeForm helps you follow a programme, log your workouts, and see your progress."
   [See a demo]                         [Create account]  [Sign in]
        │                                       │               │
        ▼                                       ▼               ▼
    DEMO (local, labelled "Demo")          ACCOUNT CREATION  SIGN IN
        │                                       │               │
-       │  "Create your own Silverfox"          │               │
+       │  "Create your own PrimeForm"          │               │
        └──────────────────────────────────────►│               │
                                                 ▼               ▼
                                           AUTHENTICATED ("Use this programme" copies the demo

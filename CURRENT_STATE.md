@@ -1,4 +1,4 @@
-# Silver Fox — Current State
+# PrimeForm — Current State
 
 **Status: factual audit, no code changed.** Everything below is derived directly from the code, database migrations, and existing tests as they exist today. Where something looks incomplete or wrong, it is reported as a gap, not fixed or redesigned.
 
@@ -10,8 +10,8 @@
 
 | Package | Role |
 |---|---|
-| `apps/mobile` | The actual product — an Expo (React Native + Expo Router) app, run as a native app or as a web build (`expo start --web`). This is Silverfox. |
-| `apps/web` | A separate design-system showcase (Next.js). Does not implement any Silverfox product screens or logic. Not covered further here. |
+| `apps/mobile` | The actual product — an Expo (React Native + Expo Router) app, run as a native app or as a web build (`expo start --web`). This is PrimeForm. |
+| `apps/web` | A separate design-system showcase (Next.js). Does not implement any PrimeForm product screens or logic. Not covered further here. |
 | `packages/domain` | Pure business logic — progression, session/workout math, PRs, volume, consistency, validation rules. No I/O. |
 | `packages/types` | Shared branded ID types (`UserId`, `ProgramId`, etc.) and small shared types. |
 | `packages/config` | Design tokens (color, spacing, typography, touch targets) and the `Theme` type. |

@@ -39,9 +39,13 @@ test.describe("Profile", () => {
   });
 
   test("happy path: fill in the profile, save, refresh, verify it persisted", async ({ readyPage }) => {
-    // A full document reload of this app takes ~30s by itself; leave enough
-    // room on top of the initial navigation and save.
-    test.setTimeout(120_000);
+    // This comment used to justify 120s by claiming "a full reload takes
+    // ~30s" — stale: the production-mode webServer (playwright.config.ts)
+    // made reloads ~0.5-1s, and that claim was never revisited after the
+    // fix. This test does one navigation, several fills/clicks, one save,
+    // and one reload — 45s is a real margin above the 30s default for a
+    // multi-step flow with real Supabase round-trips, not a guess.
+    test.setTimeout(45_000);
     await goToProfile(readyPage);
     await readyPage.getByLabel("Age (optional)").fill("47");
     await readyPage.getByText("intermediate", { exact: true }).click();

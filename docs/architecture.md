@@ -1,6 +1,6 @@
 # Architecture
 
-Silver Fox is a pnpm + Turborepo monorepo. It exists to maximize code reuse
+PrimeForm is a pnpm + Turborepo monorepo. It exists to maximize code reuse
 between the mobile app (Expo/React Native) and the web app (Next.js) while
 keeping the parts that must be platform-specific cleanly separated.
 

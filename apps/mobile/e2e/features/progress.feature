@@ -1,7 +1,7 @@
 Feature: Tracking training progress
   In order to see whether my training is working
   As someone following a training programme
-  I want Silverfox to summarise my progress over time
+  I want PrimeForm to summarise my progress over time
 
   Rule: Progress reflects only the training I have actually finished
 

@@ -1,4 +1,4 @@
-# Silverfox — Authentication Foundation Implementation Report
+# PrimeForm — Authentication Foundation Implementation Report
 
 Covers `CORE_IMPLEMENTATION_PLAN.md` Stages 1–4, delivered across two reviewed rounds. **Round 1** (Stages 1–2, below): real sign-up/sign-in/sign-out, the two-layer state model, and the fractional-weight fix. **Round 2** (new section further down): Stage 3's realistic local Demo content and Stage 4's "Use this programme"/"Start fresh" transition, plus a fresh, re-verified check of the live Supabase environment per this round's explicit instruction not to assume the earlier check still holds. Per the stop condition, work paused here for review both times — Stage 5 onward (validation hardening, exercise metadata) has not been started.
 
@@ -41,7 +41,7 @@ Two independent layers, kept deliberately separate:
 - **Client View Mode** — `logged_out` | `demo` | `app`, a purely local presentation choice. `demo` never results in any Supabase call.
 
 ### 4. Pre-authentication UI (`components/AuthFlow.tsx` — new)
-Welcome screen (what Silverfox does + See a demo / Create account / Sign in), sign-up form, sign-in form, and a minimal Demo screen (static example content, clearly labelled, zero network calls) — kept deliberately small per the "keep the Demo experience itself minimal if necessary" allowance. Every form shows a specific, visible error on failure (no silent failures) and a loading state during submission.
+Welcome screen (what PrimeForm does + See a demo / Create account / Sign in), sign-up form, sign-in form, and a minimal Demo screen (static example content, clearly labelled, zero network calls) — kept deliberately small per the "keep the Demo experience itself minimal if necessary" allowance. Every form shows a specific, visible error on failure (no silent failures) and a loading state during submission.
 
 ### 5. App gate (`app/_layout.tsx`)
 `SessionGate` (which unconditionally called `ensureSession()`, silently creating an anonymous account on every launch) replaced by `AppGate`, which renders `AuthFlow` unless a real Supabase session already exists. No other route or screen in the app was touched.
@@ -113,7 +113,7 @@ No test was skipped, weakened, or deleted to make this pass.
 | Document | Status |
 |---|---|
 | `PRODUCT_FOUNDATION.md`, `AUTH_AND_STATE_MODEL.md`, `CORE_IMPLEMENTATION_PLAN.md`, `FOUNDATION_DECISIONS.md`, `PROGRESSION_LOGIC_AUDIT.md` | Updated in the prior review pass to reflect the *planned* model; the weight-fix direction correction (§1 above) has been applied to `PROGRESSION_LOGIC_AUDIT.md` and `CORE_IMPLEMENTATION_PLAN.md` to match what was actually built. |
-| `apps/mobile/e2e/features/starting_silverfox.feature` | **Rewritten** to describe the implemented model (first visit, account creation, sign-in, return-while-signed-in, sign-out, expiry, connection failure) — the previous "session established automatically" content is gone, since that behaviour no longer exists. |
+| `apps/mobile/e2e/features/starting_primeform.feature` | **Rewritten** to describe the implemented model (first visit, account creation, sign-in, return-while-signed-in, sign-out, expiry, connection failure) — the previous "session established automatically" content is gone, since that behaviour no longer exists. |
 | `apps/mobile/e2e/features/demo_experience.feature` | **New.** Covers entering and leaving the demo. Deliberately does **not** include "Use this programme"/"Start fresh" scenarios — neither is implemented yet (both remain Stage 3/4 work), and writing a scenario for unimplemented behaviour would violate this project's established BDD discipline. |
 | `apps/mobile/e2e/features/data_privacy.feature` | Unchanged in wording (it was already correct, technology-agnostic language) — its automation notes are updated in `BDD_SPECIFICATION.md` to reflect that two real accounts, not two anonymous sessions, are now the natural way to prove it. |
 | `BDD_SPECIFICATION.md` | Updated per-feature notes for the three files above, with explicit IMPLEMENTED/NOT IMPLEMENTED marking. |
@@ -180,7 +180,7 @@ Checked directly (not assumed): the 0.5kg stepper, `numeric` weight storage, unr
 |---|---|
 | `CORE_IMPLEMENTATION_PLAN.md` | Stages 3 and 4 marked **DONE** with an implementation summary; each stage's original plan text is kept below its summary for reference, not deleted. |
 | `AUTH_AND_STATE_MODEL.md` | New "Existing anonymous users — re-verified 2026-09-21" section added. |
-| `apps/mobile/e2e/features/demo_experience.feature` | Two new scenarios added for "Use this programme" / "Start fresh" (see above). `starting_silverfox.feature` and `data_privacy.feature` were checked and already correctly describe the current model — no changes needed. |
+| `apps/mobile/e2e/features/demo_experience.feature` | Two new scenarios added for "Use this programme" / "Start fresh" (see above). `starting_primeform.feature` and `data_privacy.feature` were checked and already correctly describe the current model — no changes needed. |
 | `IMPLEMENTATION_REPORT.md` (this file) | This "Round 2" section added; Round 1's content kept as-is above it. |
 
 ## IMPLEMENTED (cumulative, Stages 1–4)

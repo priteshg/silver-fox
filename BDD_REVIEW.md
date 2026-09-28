@@ -1,4 +1,4 @@
-# Silverfox — BDD Specification Review
+# PrimeForm — BDD Specification Review
 
 A critical second pass over `BDD_DISCOVERY.md`, `BDD_SPECIFICATION.md`, `TEST_AUTOMATION_STRATEGY.md`, and all 11 feature files in `apps/mobile/e2e/features/`. Where a genuine quality problem was found, it has been **corrected directly in the Gherkin/documentation** (permitted by this review's scope). No application code and no automation/test implementation was touched.
 
@@ -14,13 +14,13 @@ The original specification was structurally sound (correct Feature/Rule/Scenario
 
 One capability — **progressive overload / next-workout suggestions** — was found referenced in the project's own prior E2E documentation (`apps/mobile/e2e/JOURNEY_INVENTORY.md`, journey #8: "Progressive overload suggestion — display and tap-to-apply") but was never investigated by the original discovery pass and is **not** added here, because adding a rule for it now, without re-running discovery specifically for it, would risk exactly the invention this whole exercise is meant to avoid. It's recorded below as the highest-priority missing behaviour requiring its own discovery pass before it can be specified.
 
-With those fixes applied, the specification now passes the "would a product owner, developer, and tester all agree what Silverfox is supposed to do" test for every scenario it contains — see §5 for the specific scenarios that failed this test before being rewritten, and §6 for what's still deliberately absent.
+With those fixes applied, the specification now passes the "would a product owner, developer, and tester all agree what PrimeForm is supposed to do" test for every scenario it contains — see §5 for the specific scenarios that failed this test before being rewritten, and §6 for what's still deliberately absent.
 
 ---
 
 ## 2. Features Reviewed
 
-All 11 reviewed line by line: `starting_silverfox`, `data_privacy`, `programmes`, `programme_exercises`, `exercise_library`, `workouts`, `workout_sets`, `workout_history`, `progress`, `conditioning`, `profile`.
+All 11 reviewed line by line: `starting_primeform`, `data_privacy`, `programmes`, `programme_exercises`, `exercise_library`, `workouts`, `workout_sets`, `workout_history`, `progress`, `conditioning`, `profile`.
 
 **Feature-structure findings:**
 - No Feature was found to be describing a screen rather than a capability. `programme_exercises.feature` was the closest borderline case (it maps closely to one screen, "Configure Programme Exercise"), but its *content* is a coherent capability (setting and adjusting what a training day asks for), not a walkthrough of that screen — kept as-is, with one rule relocated out of it (see below).
@@ -47,7 +47,7 @@ No Rule was found to exist purely to organise technical tests.
 Every scenario was checked against all 12 questions in the request. Full detail on the ones that failed is in §5. Two points worth calling out explicitly since they're easy to get wrong in this exact domain:
 
 - **"When I record 80 kg for 8 repetitions" is not a UI click sequence.** It describes a single meaningful business event (recording a set) at the same level of abstraction a person would describe it to another person. Whether that's automated as one gesture or a sequence of interactions is entirely an automation-layer concern (see `TEST_AUTOMATION_STRATEGY.md`) and rightly invisible here.
-- **"Then only the first 80/120 characters are accepted" was checked carefully for being implementation-flavoured** (does "accepted" imply a text-input event model?). It survives because it describes an outcome a person can observe directly (what ends up in the name) without reference to any control, screen, or technology — it would remain equally true if Silverfox's name field were a dial, a voice input, or a paper form with a strict character limit enforced by whoever's writing it down.
+- **"Then only the first 80/120 characters are accepted" was checked carefully for being implementation-flavoured** (does "accepted" imply a text-input event model?). It survives because it describes an outcome a person can observe directly (what ends up in the name) without reference to any control, screen, or technology — it would remain equally true if PrimeForm's name field were a dial, a voice input, or a paper form with a strict character limit enforced by whoever's writing it down.
 
 ---
 
@@ -55,11 +55,11 @@ Every scenario was checked against all 12 questions in the request. Full detail 
 
 | # | File | Scenario | Problem found | Fix applied |
 |---|---|---|---|---|
-| 1 | `starting_silverfox.feature` | Returning to Silverfox | "I see my training data exactly as I left it" is abstract, not concrete — fails question 5 (is the example concrete?) and question 12 (would a product owner, developer, and tester agree what this means?) — "exactly as I left it" could mean anything | Rewritten around one concrete, named programme, matching the concreteness standard used everywhere else |
+| 1 | `starting_primeform.feature` | Returning to PrimeForm | "I see my training data exactly as I left it" is abstract, not concrete — fails question 5 (is the example concrete?) and question 12 (would a product owner, developer, and tester agree what this means?) — "exactly as I left it" could mean anything | Rewritten around one concrete, named programme, matching the concreteness standard used everywhere else |
 | 2 | `programme_exercises.feature` | Adding an exercise to a training day | Used "reps" where every other feature uses "repetitions" for the same concept — fails question 11 (consistent domain language) | Changed to "repetitions" |
 | 3 | `programme_exercises.feature` | Adjusting the target repetitions for an exercise | Same terminology issue, plus the scenario title itself said "reps" | Renamed and reworded |
 | 4 | `programme_exercises.feature` → `workouts.feature` | A day with no exercises cannot be started | Filed under the wrong capability (see §2); "When I look at 'Push'" was also too vague about *which* moment reveals the missing affordance | Relocated to `workouts.feature`; reworded to "When I consider starting 'Push'" |
-| 5 | `workouts.feature` | Finishing a workout | "my workout history includes this session" collides "session" (a workout instance) with the unrelated, already-established meaning of "session" (a person's Silverfox identity, used in `starting_silverfox.feature` and `data_privacy.feature`) and with Conditioning/Mobility *Session* as a distinct domain entity — fails question 11 | Changed "this session" → "this workout" |
+| 5 | `workouts.feature` | Finishing a workout | "my workout history includes this session" collides "session" (a workout instance) with the unrelated, already-established meaning of "session" (a person's PrimeForm identity, used in `starting_primeform.feature` and `data_privacy.feature`) and with Conditioning/Mobility *Session* as a distinct domain entity — fails question 11 | Changed "this session" → "this workout" |
 | 6 | `workouts.feature` | Discarding a workout | Same collision | Same fix |
 
 All six are shown corrected in the current feature files; nothing above requires further action.
@@ -74,7 +74,7 @@ Found by re-checking `CURRENT_STATE.md`'s screen-by-screen inventory and, for an
 
 | Behaviour | Evidence | Where added |
 |---|---|---|
-| An in-progress workout can be resumed after leaving Silverfox | `app/(tabs)/index.tsx`: a "Workout In Progress" resume affordance on Home | `workouts.feature` |
+| An in-progress workout can be resumed after leaving PrimeForm | `app/(tabs)/index.tsx`: a "Workout In Progress" resume affordance on Home | `workouts.feature` |
 | Starting a new workout while one is in progress asks for confirmation | `lib/startWorkout.ts`'s `confirmAndStart`, which prompts before discarding an existing session | `workouts.feature` |
 | Exercises within a training day can be reordered | `components/ReorderableRow.tsx` — "Move {exercise} up"/"down" | `programme_exercises.feature` |
 | Previous performance is visible while recording a new set | `components/SetRow.tsx`'s `previousLabel` ("Last time: …") | `workout_sets.feature` |
@@ -102,9 +102,9 @@ Found by re-checking `CURRENT_STATE.md`'s screen-by-screen inventory and, for an
 
 **No true duplicates found.** One pair of scenarios was checked closely for being the same behaviour twice:
 
-- `starting_silverfox.feature`'s "Returning to Silverfox" (a programme persists across a restart) and `workout_history.feature`'s "Workout history survives returning to Silverfox" (a finished workout persists across a restart).
+- `starting_primeform.feature`'s "Returning to PrimeForm" (a programme persists across a restart) and `workout_history.feature`'s "Workout history survives returning to PrimeForm" (a finished workout persists across a restart).
 
-**Verdict: not a duplicate.** These demonstrate the *same general rule* (a returning session sees its data intact) using two *different concrete domain objects*, in the two places that rule actually matters to a reader of each feature file. A reader of `workout_history.feature` shouldn't have to cross-reference `starting_silverfox.feature` to trust that history specifically survives a restart — and removing either would leave a gap, not remove redundancy. This is the same reasoning that justifies the naming rules appearing in parallel form under both `programmes.feature` and `exercise_library.feature`.
+**Verdict: not a duplicate.** These demonstrate the *same general rule* (a returning session sees its data intact) using two *different concrete domain objects*, in the two places that rule actually matters to a reader of each feature file. A reader of `workout_history.feature` shouldn't have to cross-reference `starting_primeform.feature` to trust that history specifically survives a restart — and removing either would leave a gap, not remove redundancy. This is the same reasoning that justifies the naming rules appearing in parallel form under both `programmes.feature` and `exercise_library.feature`.
 
 ---
 
@@ -114,7 +114,7 @@ Carried forward from `BDD_DISCOVERY.md`'s Unknown/Undecided list (re-verified as
 
 1. Whether "no credentials, ever" is permanent product intent or a placeholder.
 2. Whether a session should ever be transferable between devices.
-3. Whether Silverfox should always explain a rejected input, and how.
+3. Whether PrimeForm should always explain a rejected input, and how.
 4. Whether repetitions/reps-in-reserve should get structural protection (like weight now has) or explicit validation instead.
 5. Whether custom exercises should become editable/removable.
 6. Whether Profile does or should influence recommendations/progression.
@@ -131,7 +131,7 @@ Carried forward from `BDD_DISCOVERY.md`'s Unknown/Undecided list (re-verified as
 
 One item was reviewed specifically for being *borderline* rather than clearly wrong, and is worth recording as a conscious decision rather than an oversight:
 
-- **`data_privacy.feature`'s two scenarios** describe a genuine behavioural/security requirement in pure domain language (per the request's own worked example) and are correctly kept as BDD. What is *not* in them — and correctly so — is any mention of how that privacy is enforced (row-level security, an access-control list, anything else). If Silverfox's backend were rewritten entirely, these two scenarios would still describe a true requirement.
+- **`data_privacy.feature`'s two scenarios** describe a genuine behavioural/security requirement in pure domain language (per the request's own worked example) and are correctly kept as BDD. What is *not* in them — and correctly so — is any mention of how that privacy is enforced (row-level security, an access-control list, anything else). If PrimeForm's backend were rewritten entirely, these two scenarios would still describe a true requirement.
 
 ---
 
@@ -141,7 +141,7 @@ One item was reviewed specifically for being *borderline* rather than clearly wr
 
 | Concept | Canonical term | Do not use |
 |---|---|---|
-| The person's identity in Silverfox | **Session** | "account," "login," "user" |
+| The person's identity in PrimeForm | **Session** | "account," "login," "user" |
 | A training plan | **Programme** | "plan," "routine" (neither appeared as a competing term in practice, but both are plausible drift — worth guarding against as the spec grows) |
 | A named day within a Programme | **Training Day** | "day" alone when it could be ambiguous, "programme day" |
 | A movement | **Exercise** | — (no drift found) |
@@ -170,9 +170,9 @@ Legend for **Status**: Covered / Covered-with-caveat (works, but has a known aut
 
 | Application capability | Current implementation | BDD feature | Covered? | Status |
 |---|---|---|---|---|
-| Anonymous session established on first use | `lib/supabase/auth.ts` | `starting_silverfox.feature` | Yes | Covered |
-| Session restored on relaunch | AsyncStorage-persisted session | `starting_silverfox.feature` | Yes | Covered |
-| Connection failure shows retry | `SessionGate` error state | `starting_silverfox.feature` | Yes | Covered |
+| Anonymous session established on first use | `lib/supabase/auth.ts` | `starting_primeform.feature` | Yes | Covered |
+| Session restored on relaunch | AsyncStorage-persisted session | `starting_primeform.feature` | Yes | Covered |
+| Connection failure shows retry | `SessionGate` error state | `starting_primeform.feature` | Yes | Covered |
 | Sign-out / ending a session | Does not exist | — | No | Ambiguous — see §8.1 |
 | Choose a built-in programme | "Make this my programme" | `programmes.feature` | Yes | Covered |
 | Create a custom programme | `/programs/new` | `programmes.feature` | Yes | Covered |
@@ -236,7 +236,7 @@ Legend for **Status**: Covered / Covered-with-caveat (works, but has a known aut
 2. **Before automation begins**, run a short, dedicated discovery pass specifically on progressive-overload/next-workout suggestions — this is the single largest confirmed gap, and it's a core enough capability (the project's own prior documentation calls it out by name) that automating everything else first and leaving it out risks the specification looking more complete than it is.
 3. **Before automation begins**, spend the ~30 minutes needed to confirm the three "missing-minor-to-confirm" items in §6 (add/remove training day, body-measurement/photo logging, programme category filtering) rather than guessing their shape — each is small enough that a quick confirming look is cheap insurance against inventing the wrong rule.
 4. **When automation begins**, treat every "Covered-with-caveat" row in §11 as a note to the automation layer, not the specification — e.g. the two `data_privacy.feature` scenarios need real, separate sessions to automate meaningfully (already captured in `TEST_AUTOMATION_STRATEGY.md`), and the confirmation-dialog scenarios (removing a programme, starting a new workout over an old one) may need a different automation approach per platform given the known dialog-testability caveat.
-5. **Adopt the §10 glossary as the enforced vocabulary** going forward — in particular, reserve "session" exclusively for a person's Silverfox identity in any future scenario, and always write "repetitions" in full.
+5. **Adopt the §10 glossary as the enforced vocabulary** going forward — in particular, reserve "session" exclusively for a person's PrimeForm identity in any future scenario, and always write "repetitions" in full.
 
 ---
 

@@ -42,7 +42,7 @@ export default function Home() {
               margin: 0,
             }}
           >
-            Silver Fox
+            PrimeForm
           </h1>
           <p
             style={{
@@ -51,7 +51,7 @@ export default function Home() {
               marginTop: theme.spacing.xs,
             }}
           >
-            Premium training, tracked precisely.
+            Training that adapts as you do.
           </p>
         </div>
 

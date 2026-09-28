@@ -1,11 +1,11 @@
----
-name: silverfox-quality-engineering
+ ---
+name: primeform-quality-engineering
 description: >-
-  Silverfox's testing operating principles — which layer owns a given test
+  PrimeForm's testing operating principles — which layer owns a given test
   (domain/unit, integration/API, Playwright acceptance, Android/device,
   manual exploratory, or agent-driven exploratory), when to add tests, and
   how to investigate a failure. Use this whenever adding tests for a new
-  Silverfox feature, deciding where a new test belongs, reviewing test
+  PrimeForm feature, deciding where a new test belongs, reviewing test
   coverage before changing existing behaviour, triaging a failing test
   (product defect vs test defect vs environment issue), or when a PR/change
   is adding "just one more" Playwright test for something that isn't really
@@ -14,9 +14,9 @@ description: >-
   flaky", "why did CI fail", even without the words "QE" or "test strategy".
 ---
 
-# Silverfox Quality Engineering
+# PrimeForm Quality Engineering
 
-Silverfox already has a documented test-layer strategy and a real, lived
+PrimeForm already has a documented test-layer strategy and a real, lived
 precedent for applying it. This skill is the operating summary — the full
 reasoning lives in the referenced documents, which are the source of truth.
 Read them rather than trusting this file's summaries if they ever disagree.
@@ -34,7 +34,7 @@ Read them rather than trusting this file's summaries if they ever disagree.
 | Domain/unit | `packages/domain/src/__tests__/*`, `apps/mobile/**/__tests__/*` | `pnpm test` (root) or per-package `vitest run` | Pure calculations, business rules, component behaviour with a fake backend |
 | Integration/API/data-layer | `apps/mobile/integration/*.test.ts` | `pnpm --filter @silver-fox/mobile test:integration` | Real Supabase round-trips (persistence, escaping, RLS-adjacent checks) with no browser |
 | Playwright acceptance | `apps/mobile/e2e/journeys/*.spec.ts` | `pnpm --filter @silver-fox/mobile test:e2e` | Real user journeys through the real UI — the one thing only a browser can prove |
-| Android/device | not yet automated — see `silverfox-mobile-testing` skill | manual today | Real safe-area/system-nav/touch-target behaviour a browser viewport cannot see |
+| Android/device | not yet automated — see `primeform-mobile-testing` skill | manual today | Real safe-area/system-nav/touch-target behaviour a browser viewport cannot see |
 | Manual exploratory | — | — | Discovering behaviour/questions no automated layer surfaced yet (`BDD_DISCOVERY.md`'s "Known Questions" list is exactly this) |
 | Agent-driven exploratory ("Flow Agent") | ad hoc, via the Claude Browser tool | — | Broad, unscripted UI walkthroughs to catch regressions no one specified a test for; not run on every change |
 
@@ -65,7 +65,7 @@ behaviour only. Per `BDD_SPECIFICATION.md`'s own exclusion list: no
 selectors, no screen/button/database/network references, no security-payload
 fuzzing, no mobile-viewport/visual-layout concerns (those belong in the
 mobile-testing layer, not Gherkin). The test: *would a non-technical product
-person read this scenario and learn something true about how Silverfox
+person read this scenario and learn something true about how PrimeForm
 behaves, without knowing anything about how it's built?* If not, it belongs
 in a lower layer, not in a `.feature` file. Reuse the existing domain
 glossary at the top of `BDD_SPECIFICATION.md` rather than inventing new terms.
@@ -119,6 +119,6 @@ full sweep of the same permutations).
 ## Don't over-engineer
 
 No new test framework, mocking library, or page-object abstraction without a
-concrete Silverfox problem it solves. The existing patterns
+concrete PrimeForm problem it solves. The existing patterns
 (`fakeSupabase.ts`, `mockAsyncStorage.ts`, per-worker Playwright fixtures,
 `RUN_TAG`-scoped cleanup) have already absorbed every real need so far.

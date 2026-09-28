@@ -3,7 +3,9 @@ import { recordFinding } from "../support/findings";
 import { goToTab } from "../support/nav";
 
 test.describe("Navigation between screens", () => {
-  test("all 5 bottom tabs are reachable and show distinct, correct content", async ({ readyPage }) => {
+  test("all 5 bottom tabs are reachable and show distinct, correct content", { tag: "@smoke" }, async ({
+    readyPage,
+  }) => {
     await goToTab(readyPage, "Workouts");
     await expect(readyPage.getByText("Start a Workout")).toBeVisible();
 
@@ -133,7 +135,11 @@ test.describe("Navigation between screens", () => {
   });
 });
 
-test.describe("Mobile viewport — bottom navigation", () => {
+// @mobile: forces its own 412x915 viewport regardless of which project runs
+// it, so executing it under both desktop-chromium and mobile was
+// pure duplication — it produces the identical viewport either way. Tagged
+// so it runs on the mobile project only (see playwright.config.ts).
+test.describe("Mobile viewport — bottom navigation", { tag: "@mobile" }, () => {
   test.use({ viewport: { width: 412, height: 915 } }); // Pixel 7 logical size
 
   test("the bottom tab bar stays fully within the viewport on every tab, and page content is never hidden behind it", async ({

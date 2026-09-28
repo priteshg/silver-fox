@@ -1,4 +1,4 @@
-# Silverfox — Authentication and User State Model
+# PrimeForm — Authentication and User State Model
 
 This is the document with the explicit recommendation the brief asked for on the anonymous-session question. Short version up front: **the current anonymous-Supabase-session architecture should not simply be retained and wrapped in a new label — it should stop being the default entry point.** The reasoning follows.
 
@@ -12,13 +12,13 @@ From `lib/supabase/auth.ts` and `lib/supabase/client.ts`:
 - `ensureSession()` checks for a persisted session; if none exists, it calls `supabase.auth.signInAnonymously()` — silently, with no user action, no explanation, and no consent gesture of any kind.
 - This creates a real `auth.users` row and (via a database trigger) a real `profiles` row, permanently, for every single app install — including someone who opens the app once out of curiosity and never returns.
 - There is no sign-out anywhere in the codebase.
-- There is no way, today, to distinguish "someone who has explored Silverfox" from "someone with a real training history" — they are the same database row from the first second the app runs.
+- There is no way, today, to distinguish "someone who has explored PrimeForm" from "someone with a real training history" — they are the same database row from the first second the app runs.
 
 ## Is this "anonymous authentication as a substitute for real authentication"? Yes.
 
-This is precisely the pattern the brief's own section 9 asks me to look for, and it's present. The tell isn't that anonymous auth exists — Supabase's anonymous auth is a legitimate, well-designed feature for exactly one purpose: giving a person a real, persistent identity *before* they've decided to commit to credentials, so their in-progress activity isn't lost if they sign up later. The problem is **how Silverfox uses it**: as an invisible, mandatory bootstrap step with no corresponding "and later they become a real account" flow, no way to leave it, and — most importantly for this milestone — no way to be a mere visitor without it firing.
+This is precisely the pattern the brief's own section 9 asks me to look for, and it's present. The tell isn't that anonymous auth exists — Supabase's anonymous auth is a legitimate, well-designed feature for exactly one purpose: giving a person a real, persistent identity *before* they've decided to commit to credentials, so their in-progress activity isn't lost if they sign up later. The problem is **how PrimeForm uses it**: as an invisible, mandatory bootstrap step with no corresponding "and later they become a real account" flow, no way to leave it, and — most importantly for this milestone — no way to be a mere visitor without it firing.
 
-Once "logged out" and "demo" become real product states (as the brief now wants), keeping today's behaviour unchanged would mean: a "logged-out" visitor opening the app still silently gets a permanent backend identity the moment the screen renders, before they've even seen the word "Silverfox." That's not a logged-out state with a different label on it — it's the same state as today, undermining the entire point of this exercise.
+Once "logged out" and "demo" become real product states (as the brief now wants), keeping today's behaviour unchanged would mean: a "logged-out" visitor opening the app still silently gets a permanent backend identity the moment the screen renders, before they've even seen the word "PrimeForm." That's not a logged-out state with a different label on it — it's the same state as today, undermining the entire point of this exercise.
 
 ## PROPOSED STATE
 
@@ -35,7 +35,7 @@ Getting this separation right is what makes "Demo never touches Supabase" a stru
 
 **1. Logged out**
 - No `auth.users` row exists for this person yet. No network call to Supabase Auth has been made.
-- They see a short, real explanation of what Silverfox does (not marketing copy — see `PRODUCT_FOUNDATION.md`) and two ways forward: enter Demo, or create/sign into a real account.
+- They see a short, real explanation of what PrimeForm does (not marketing copy — see `PRODUCT_FOUNDATION.md`) and two ways forward: enter Demo, or create/sign into a real account.
 - No application data is readable or writable in this state beyond the built-in catalogue, which is already public by design (`exercises`/`programs` RLS policies already grant `select` to the `anon` role for non-custom rows — this is existing, correct behaviour, not something this milestone needs to touch).
 
 **2. Demo**
@@ -63,7 +63,7 @@ Getting this separation right is what makes "Demo never touches Supabase" a stru
                 │ DEMO  │  │      AUTHENTICATED       │        │
                 └───┬───┘  └────────────┬────────────┘        │
                     │                   │                      │
-        [Create your own Silverfox]     │                      │
+        [Create your own PrimeForm]     │                      │
                     └──────────────────►│                      │
                                          │                      │
                                     [Sign out]────────────────►┘
@@ -88,7 +88,7 @@ One consequence worth being explicit about: this finally makes the `data_privacy
 **Replaced, for the visitor-facing path.** Not modified-in-place, not retained-underneath. My reasoning, stated plainly because the brief asked me not to hedge:
 
 - Keeping it as the mechanism behind "Demo" would mean Demo either (a) shares one real backend account across every visitor ever — a serious, avoidable contamination risk, exactly what the brief says must never happen — or (b) creates a fresh anonymous account per visitor, which solves contamination but recreates the exact problem this milestone exists to fix: a silent, permanent backend row for someone who was just looking.
-- Keeping it as the mechanism behind "Authenticated" would mean an "authenticated" person might not actually have provided any credentials — which contradicts the brief's own definition of that state ("a real authenticated Silverfox user with their own profile...").
+- Keeping it as the mechanism behind "Authenticated" would mean an "authenticated" person might not actually have provided any credentials — which contradicts the brief's own definition of that state ("a real authenticated PrimeForm user with their own profile...").
 - The one place anonymous auth could still legitimately earn its keep — a frictionless "try it for real, decide on credentials later" bridge — is a real, valid pattern used by other products, but it adds a genuine piece of complexity (an identity-linking/upgrade flow, using `supabase.auth.linkIdentity`, which is referenced in the current code's own comments as a someday-option but has never been built or tested). Given this milestone's explicit goal of keeping scope small and the three states crisp, **I recommend not building that bridge now.** If a future milestone wants a lower-friction path than "create an account before touching real data," that's a reasonable thing to design deliberately then — not something to smuggle back in via the current mechanism now.
 
 ### Existing anonymous users — re-verified 2026-09-21, not assumed
@@ -107,7 +107,7 @@ profiles_with_display_name: 0
 
 **Conclusion: no meaningful real user data exists in this Supabase project, now or at the time of the original check.** Everything present is test/development debris from this engagement itself. Per the instruction, this is documented rather than assumed, and no destructive action was taken — the stray rows above are left exactly as found, since deleting them isn't necessary for anything in this milestone and cleanup-for-its-own-sake isn't the goal here.
 
-### What real authentication should Silverfox use?
+### What real authentication should PrimeForm use?
 
 The brief doesn't specify a credential mechanism, so this is a genuine decision point, not something to leave implicit. My recommendation: **email + password**, as the baseline for this milestone.
 

@@ -1,6 +1,6 @@
 # Product Vision
 
-Silver Fox is a premium fitness and nutrition application for people who take
+PrimeForm is a premium fitness and nutrition application for people who take
 their training seriously. It replaces spreadsheets, notes apps, and generic
 fitness trackers with a fast, precise, and visually polished tool built
 around the two things that actually drive results: consistent workout

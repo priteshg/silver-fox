@@ -78,13 +78,27 @@ export default async function globalSetup(config: FullConfig) {
       // to get a same-origin page to write localStorage into; this key format
       // (`sb-<project-ref>-auth-token`) matches what @supabase/supabase-js
       // itself uses and reads back on next launch via AsyncStorage/localStorage.
-      await page.goto(baseURL, { timeout: 60_000 });
+      // A short, deliberate timeout here: this is the very first request the
+      // whole run makes, so a dev server that's down, still compiling, or
+      // silently wedged (a real failure mode this project hit directly — a
+      // stale, long-lived server left over from unrelated work) must be
+      // reported clearly and fast, not produce a multi-minute hang with no
+      // useful signal before a single test has even started.
+      try {
+        await page.goto(baseURL, { timeout: 10_000 });
+      } catch (err) {
+        throw new Error(
+          `global-setup couldn't reach the dev server at ${baseURL} within 10s. ` +
+            `Is it actually running and healthy (not just something old still holding the port)? ` +
+            `Original error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
       await page.evaluate(
         ({ key, session }) => window.localStorage.setItem(key, JSON.stringify(session)),
         { key: `sb-${projectRef}-auth-token`, session: data.session },
       );
       await page.reload();
-      await page.getByText("Your Training Week").waitFor({ timeout: 45_000 });
+      await page.getByText("Your Training Week").waitFor({ timeout: 10_000 });
       await context.storageState({ path: path.join(authDir, `state-${workerIndex}.json`) });
       await context.close();
     }

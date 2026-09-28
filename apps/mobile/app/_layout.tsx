@@ -1,5 +1,5 @@
 import { ErrorState, LoadingState, useTheme } from "@silver-fox/ui";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -22,6 +22,7 @@ function RootStack() {
         }}
       >
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="reset-password" options={{ gestureEnabled: false }} />
         <Stack.Screen name="workout/active" options={{ gestureEnabled: false }} />
         <Stack.Screen
           name="workout/summary"
@@ -65,7 +66,19 @@ function RootStack() {
  */
 function AppGate({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
+  const pathname = usePathname();
   const { status, errorMessage, viewMode, retry, pendingProgramChoice } = useAuth();
+
+  // The password-reset screen must be reachable regardless of auth state —
+  // that's the whole point of it. A person opening a reset link normally has
+  // no session yet (would otherwise render AuthFlow here), and partway
+  // through that screen's own lifecycle `exchangeRecoveryCode` establishes a
+  // real (temporary) session — which, without this bypass, would flip
+  // `viewMode` to "app" and yank them into the real app mid-flow, before
+  // they've actually set a new password. Checked first, ahead of the
+  // loading/error states too, so the screen isn't blocked behind a
+  // "Connecting…" flash on a cold start via deep link.
+  if (pathname === "/reset-password") return <>{children}</>;
 
   if (status === "loading") {
     return (

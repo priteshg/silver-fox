@@ -2,7 +2,7 @@
   "name": "silver-fox",
   "private": true,
   "version": "0.0.0",
-  "description": "Silver Fox: premium fitness and nutrition application monorepo",
+  "description": "PrimeForm: premium fitness and nutrition application monorepo",
   "engines": {
     "node": ">=20.9.0",
     "pnpm": ">=9.0.0"
@@ -20,6 +20,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@playwright/cli": "^0.1.21",
     "prettier": "3.9.8",
     "turbo": "2.10.13",
     "typescript": "6.0.3"

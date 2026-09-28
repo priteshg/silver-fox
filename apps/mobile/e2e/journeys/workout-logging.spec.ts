@@ -54,7 +54,9 @@ test.describe("Workout logging: sets, weight, reps, RIR", () => {
     }
   });
 
-  test("happy path: start a workout, log a set with valid values, see it marked complete", async ({ readyPage }) => {
+  test("happy path: start a workout, log a set with valid values, see it marked complete", { tag: "@smoke" }, async ({
+    readyPage,
+  }) => {
     await startTodaysWorkout(readyPage);
     await readyPage.getByRole("button", { name: "Increase weight" }).first().click();
     await readyPage.getByLabel("reps").first().fill("8");
@@ -108,5 +110,38 @@ test.describe("Workout logging: sets, weight, reps, RIR", () => {
     for (let i = 0; i < 45 && (await decrease.isEnabled()); i++) await decrease.click();
     expect(await readWeightKg(readyPage), "weight should clamp at 0, never go negative").toBe(0);
     await expect(decrease).toBeDisabled();
+  });
+});
+
+// @mobile: a real-device usability regression check, not a functional one —
+// "technically clickable" in a browser isn't the same as usable with a real
+// finger. Confirms the weight stepper's +/- buttons stay at or above the
+// theme's own touchTarget.min (44px; see packages/config/src/tokens/
+// touchTarget.ts) at an actual mobile viewport, not just that they exist.
+test.describe("Mobile viewport — weight stepper touch targets", { tag: "@mobile" }, () => {
+  test.use({ viewport: { width: 360, height: 800 } }); // a common, tighter Android width — the size this regressed at before
+
+  test.afterEach(async ({ readyPage, supabaseAsTestUser }) => {
+    await discardIfActive(readyPage);
+    const { data: mine } = await supabaseAsTestUser.from("workouts").select("id");
+    if (mine?.length) await supabaseAsTestUser.from("workouts").delete().in("id", mine.map((w) => w.id));
+  });
+
+  test("the weight stepper's +/- buttons meet the minimum real-finger touch target size", async ({ readyPage }) => {
+    const MIN_TOUCH_TARGET_PX = 44;
+    await startTodaysWorkout(readyPage);
+
+    for (const label of ["Decrease weight", "Increase weight"]) {
+      const box = await readyPage.getByRole("button", { name: label }).first().boundingBox();
+      expect(box, `${label} button should be present and measurable`).not.toBeNull();
+      if (box) {
+        expect(box.width, `${label} width should meet the ${MIN_TOUCH_TARGET_PX}px minimum touch target`).toBeGreaterThanOrEqual(
+          MIN_TOUCH_TARGET_PX,
+        );
+        expect(box.height, `${label} height should meet the ${MIN_TOUCH_TARGET_PX}px minimum touch target`).toBeGreaterThanOrEqual(
+          MIN_TOUCH_TARGET_PX,
+        );
+      }
+    }
   });
 });

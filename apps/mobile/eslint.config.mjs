@@ -7,8 +7,10 @@ export default [
     // (HTML report, trace viewer assets, failure screenshots) — build
     // artifacts, not source, and playwright-report's bundled trace-viewer
     // JS is large enough to blow past ESLint's own defaults if it's ever
-    // linted by accident.
-    ignores: ["dist/*", "playwright-report/**", "test-results/**"],
+    // linted by accident. e2e-dist/ is the static web export the e2e suite's
+    // webServer builds and serves (playwright.config.ts) — a minified
+    // production JS bundle, same problem.
+    ignores: ["dist/*", "e2e-dist/**", "playwright-report/**", "test-results/**"],
   },
   {
     rules: {

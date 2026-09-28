@@ -41,6 +41,17 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // Explicit, not the library default ("implicit"). PKCE is what makes
+      // lib/supabase/auth.ts's password-reset flow (exchangeRecoveryCode)
+      // actually correct: without this, resetPasswordForEmail would embed
+      // tokens directly in the reset link's URL *fragment*
+      // (#access_token=...&type=recovery) instead of a `?code=` query
+      // param — a fragment expo-router's useLocalSearchParams() can't even
+      // see, and a strictly less secure shape to email in the first place.
+      // The code_verifier PKCE needs to redeem that code lives in this same
+      // AsyncStorage, so it's only ever readable by the same device that
+      // requested the reset — a deliberate, expected constraint, not a bug.
+      flowType: "pkce",
     },
   },
 );

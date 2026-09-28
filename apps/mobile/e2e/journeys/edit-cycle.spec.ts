@@ -19,9 +19,14 @@ test.describe("Edit cycle: programme exercise configuration", () => {
   test("create, configure, edit, refresh-verify, edit again, and confirm no cross-field corruption", async ({
     readyPage,
   }) => {
-    // This cycle includes a full reload (step 5), which alone takes ~30s;
-    // leave enough room on top of everything else in this multi-stage test.
-    test.setTimeout(150_000);
+    // This comment used to justify 150s by claiming "a full reload takes
+    // ~30s" — stale: the production-mode webServer (playwright.config.ts)
+    // made reloads ~0.5-1s, and that claim was never revisited after the
+    // fix. This is a genuinely long multi-stage flow (create, configure,
+    // edit, reload-verify, edit again, verify-no-corruption) with several
+    // real Supabase round-trips, so it keeps a real margin above the 30s
+    // default — just not 5x that default.
+    test.setTimeout(60_000);
 
     // 1. Create a custom programme to configure within. Navigate in-app
     // (Programmes tab -> "+ Create a custom programme") instead of

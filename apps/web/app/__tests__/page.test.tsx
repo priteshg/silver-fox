@@ -5,7 +5,7 @@ import Home from "../page";
 describe("Home", () => {
   it("renders the application name", () => {
     render(<Home />);
-    expect(screen.getByText("Silver Fox")).toBeInTheDocument();
+    expect(screen.getByText("PrimeForm")).toBeInTheDocument();
   });
 
   it("increments the tap count when the primary button is pressed", async () => {

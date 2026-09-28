@@ -28,7 +28,7 @@ Feature: Performing a workout
 
     Scenario: Resuming a workout in progress
       Given I am performing "Push"
-      When I close and reopen Silverfox
+      When I close and reopen PrimeForm
       Then I am offered a way to resume "Push"
 
   Rule: Finishing a workout records it as part of my training

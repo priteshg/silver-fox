@@ -1,4 +1,5 @@
 import type { UserId } from "@silver-fox/types";
+import * as Linking from "expo-linking";
 import { isSupabaseConfigured, supabase } from "./client";
 
 let sessionReady: Promise<UserId> | null = null;
@@ -113,6 +114,53 @@ export async function signInWithEmail(email: string, password: string): Promise<
   currentUserId = data.session.user.id as UserId;
   sessionReady = Promise.resolve(currentUserId);
   return currentUserId;
+}
+
+/**
+ * Sends a password-reset email, if the address belongs to an account.
+ * Deliberately never checked or branched on here: `resetPasswordForEmail`
+ * itself returns the same success response whether or not the address is
+ * registered (Supabase's own anti-enumeration behaviour), and this function
+ * must not add a check that would leak the difference — e.g. querying
+ * `profiles` first to decide what to show. Callers should show one fixed
+ * "check your email" message regardless of the outcome.
+ *
+ * `Linking.createURL` (not a hardcoded string) builds the right redirect for
+ * wherever this is actually running — `exp://…` in Expo Go during
+ * development, `primeform://…` in a standalone build — so the link Supabase
+ * emails back always matches how this app was actually opened.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: Linking.createURL("reset-password"),
+  });
+  if (error) throw error;
+}
+
+/**
+ * Exchanges the one-time `code` from a password-reset deep link for a real
+ * (temporary) Supabase session, scoped to exactly one thing: calling
+ * `updatePassword` below. This throws for an invalid, expired, or
+ * already-used code — Supabase enforces all of that server-side, not this
+ * app, so there's nothing else to validate here.
+ */
+export async function exchangeRecoveryCode(code: string): Promise<void> {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) throw error;
+  if (!data.session) throw new Error("The reset link did not return a session.");
+  currentUserId = data.session.user.id as UserId;
+  sessionReady = Promise.resolve(currentUserId);
+}
+
+/**
+ * Sets a new password on the session established by `exchangeRecoveryCode`.
+ * This is the only supported way to change a password in this app — there
+ * is no separate password field or hash stored anywhere outside Supabase
+ * Auth for this app to manage itself.
+ */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
 }
 
 export async function signOut(): Promise<void> {
