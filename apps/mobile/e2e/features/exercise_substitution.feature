@@ -16,6 +16,12 @@ Feature: Substituting an exercise during a workout
       When I request an alternative to Bench Press
       Then PrimeForm only recommends alternatives that use dumbbells or bodyweight
 
+    @webgap
+    # Bodyweight always yields Push-Up as a valid chest alternative in this
+    # app's curated substitution data, so "equipment that yields zero
+    # candidates for Bench Press" isn't reachable through this entry point
+    # without deeper data-modeling work — left undefined for now, not an
+    # Alert.alert gap like the other @webgap scenarios.
     Scenario: No suitable alternative exists
       Given I only have equipment that trains a different muscle group entirely
       When I request an alternative to Bench Press
@@ -31,6 +37,11 @@ Feature: Substituting an exercise during a workout
 
   Rule: The workout records what was actually performed
 
+    # "When I complete the workout" literally means Finish workout, gated
+    # behind Alert.alert (a no-op on web) — e2e/steps/exercise_substitution.steps.ts
+    # seeds the same end state a genuine finish produces directly via
+    # Supabase instead, the same technique used in progress.steps.ts's
+    # "Setting a new personal record".
     Scenario: Substitution records what actually happened
       Given I substituted Bench Press with Dumbbell Bench Press
       When I complete the workout

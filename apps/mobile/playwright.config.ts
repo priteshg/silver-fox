@@ -1,5 +1,60 @@
 import { defineConfig, devices } from "@playwright/test";
+import { defineBddConfig } from "playwright-bdd";
 import { WORKER_COUNT } from "./e2e/support/workerCount";
+
+// Generates real spec files from the listed .feature files +
+// e2e/steps/*.steps.ts into a directory *inside* the existing `testDir`
+// ("./e2e") below, so the generated tests are picked up by Playwright's own
+// default recursive testMatch with no other config changes — they run
+// alongside, not instead of, the hand-written e2e/journeys/*.spec.ts suite.
+// `bddgen` (see package.json) must run before `playwright test` to produce
+// these files; the directory is git- and watcher-ignored as a build artifact.
+//
+// Only feature files with a matching step file are listed here — bddgen
+// can't generate a spec for a scenario with zero step definitions (it can't
+// infer which fixtures `test` instance to use). The other 10 feature files
+// under e2e/features/ remain documentation-only until they get their own
+// step files; add each one here as it's covered.
+//
+// The returned path is more than a location: playwright-bdd's runtime
+// fixtures look up each generated test's BDD config *by the testDir of the
+// project running it* (confirmed directly — nesting the output dir inside
+// the existing "./e2e" testDir and relying on default recursive testMatch
+// produced "BDD config not found for testDir" at run time). So generated
+// tests need a project whose `testDir` is exactly this string — see the
+// dedicated "bdd" project below, and the matching `testIgnore` on the other
+// two projects so they don't also try (and fail) to collect the same files.
+const bddTestDir = defineBddConfig({
+  features: [
+    "e2e/features/profile.feature",
+    "e2e/features/programmes.feature",
+    "e2e/features/programme_exercises.feature",
+    "e2e/features/exercise_library.feature",
+    "e2e/features/exercise_substitution.feature",
+    "e2e/features/workout_sets.feature",
+    "e2e/features/conditioning.feature",
+    "e2e/features/progress.feature",
+    "e2e/features/workout_history.feature",
+    "e2e/features/workouts.feature",
+    "e2e/features/demo_experience.feature",
+    "e2e/features/data_privacy.feature",
+    "e2e/features/starting_primeform.feature",
+  ],
+  // Step files import their extended `test` from e2e/fixtures/bddFixtures.ts
+  // — that file must be in this glob too, or bddgen can't infer which
+  // custom test instance the step files use.
+  steps: ["e2e/steps/*.steps.ts", "e2e/fixtures/bddFixtures.ts"],
+  outputDir: "e2e/.features-gen",
+  // Scenarios tagged @webgap are real, documented gaps — mostly Alert.alert
+  // being a no-op on react-native-web (see e2e/journeys/delete-workflows.spec.ts)
+  // — not missing step definitions. @specmismatch means the scenario's own
+  // numbers contradict the real implementation. @signupgap means the
+  // scenario needs a signup that actually completes with a session, which
+  // this project's enabled email confirmation requirement blocks for an
+  // automated run. All three excluded here rather than given fake or
+  // silently-wrong steps.
+  tags: "not @webgap and not @specmismatch and not @signupgap",
+});
 
 /**
  * Drives the actual product surface — the Expo web build of the mobile app
@@ -63,11 +118,23 @@ export default defineConfig({
       name: "desktop-chromium",
       use: { ...devices["Desktop Chrome"] },
       grepInvert: /@mobile/,
+      testIgnore: /[\\/]\.features-gen[\\/]/,
     },
     {
       name: "mobile",
       use: { ...devices["Pixel 7"] },
       grep: /@mobile/,
+      testIgnore: /[\\/]\.features-gen[\\/]/,
+    },
+    // playwright-bdd-generated tests (from e2e/features/*.feature +
+    // e2e/steps/*.steps.ts — see the defineBddConfig() call above) —
+    // deliberately its own project: playwright-bdd's runtime resolves each
+    // generated test's config by the *project's* testDir, which must match
+    // bddTestDir exactly.
+    {
+      name: "bdd",
+      testDir: bddTestDir,
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {

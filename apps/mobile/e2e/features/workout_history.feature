@@ -1,3 +1,10 @@
+# "Push" — the workout day name — appears both as a "Start a Workout" day
+# button and, once a workout is recorded, as a history-row label. The
+# history-row checks in e2e/steps/workout_history.steps.ts match against
+# that row's own accessibilityLabel (added to
+# app/(tabs)/workouts/index.tsx), not a bare text substring, to stay
+# unambiguous regardless of what else is on screen or what other seeded
+# workouts this worker's shared account happens to hold at the same time.
 Feature: Reviewing workout history
   In order to see the training I have actually done
   As someone using PrimeForm

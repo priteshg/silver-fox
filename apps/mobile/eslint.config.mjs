@@ -10,7 +10,7 @@ export default [
     // linted by accident. e2e-dist/ is the static web export the e2e suite's
     // webServer builds and serves (playwright.config.ts) — a minified
     // production JS bundle, same problem.
-    ignores: ["dist/*", "e2e-dist/**", "playwright-report/**", "test-results/**"],
+    ignores: ["dist/*", "e2e-dist/**", "playwright-report/**", "test-results/**", "e2e/.features-gen/**"],
   },
   {
     rules: {

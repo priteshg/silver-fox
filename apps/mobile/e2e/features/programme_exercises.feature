@@ -19,6 +19,12 @@ Feature: Configuring exercises within a training day
 
   Rule: A person can remove an exercise from a training day
 
+    # Removing an exercise is gated behind Alert.alert, a no-op on web (see
+    # e2e/journeys/delete-workflows.spec.ts's KNOWN GAP tests) —
+    # e2e/steps/programme_exercises.steps.ts deletes the program_exercises
+    # row directly via Supabase instead of driving the confirm dialog,
+    # matching the technique used elsewhere in this suite for Alert-gated
+    # actions.
     Scenario: Removing an exercise from a training day
       Given "Push" includes "Bench Press"
       When I remove "Bench Press" from "Push"
@@ -27,6 +33,6 @@ Feature: Configuring exercises within a training day
   Rule: A person can change the order exercises appear in within a training day
 
     Scenario: Reordering an exercise within a training day
-      Given "Push" lists "Bench Press" before "Overhead Press"
-      When I move "Overhead Press" earlier in "Push"
-      Then "Push" lists "Overhead Press" before "Bench Press"
+      Given "Push" lists "Bench Press" before "Shoulder Press"
+      When I move "Shoulder Press" earlier in "Push"
+      Then "Push" lists "Shoulder Press" before "Bench Press"

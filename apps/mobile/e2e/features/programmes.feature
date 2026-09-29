@@ -27,6 +27,11 @@ Feature: Following a training programme
 
   Rule: A person can remove a programme they created
 
+    # Deleting a programme is gated behind Alert.alert, a no-op on web (see
+    # e2e/journeys/delete-workflows.spec.ts's KNOWN GAP tests) —
+    # e2e/steps/programmes.steps.ts deletes the row directly via Supabase
+    # instead of driving the confirm dialog, matching the technique used
+    # elsewhere in this suite for Alert-gated actions.
     Scenario: Removing a programme I created
       Given I have a programme called "Strength 3 Days"
       When I remove "Strength 3 Days"

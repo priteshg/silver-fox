@@ -21,6 +21,13 @@ Feature: Trying PrimeForm before creating an account
 
   Rule: Someone who likes the demo programme can create an account and keep it
 
+    @signupgap
+    # "Create an account" only reaches the "Keep the demo programme?" screen
+    # after signUpWithEmail() returns status "signed_in" — but this
+    # project's Supabase has email confirmation enabled (see
+    # lib/supabase/auth.ts's SignUpResult doc comment), so a real UI signup
+    # always returns "confirmation_required" instead. Not reachable by an
+    # automated run without a way to confirm a real email inline.
     Scenario: Choosing to use the demo programme
       Given I am looking at the demo
       When I create an account and choose to use this programme
@@ -29,6 +36,10 @@ Feature: Trying PrimeForm before creating an account
 
   Rule: Someone can create an account from the demo without keeping anything from it
 
+    @signupgap
+    # Same as "Choosing to use the demo programme" above — needs a signup
+    # that actually completes with a session, which this project's enabled
+    # email confirmation requirement blocks for an automated run.
     Scenario: Starting fresh instead of keeping the demo programme
       Given I am looking at the demo
       When I create an account and choose to start fresh

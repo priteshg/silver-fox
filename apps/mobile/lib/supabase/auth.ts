@@ -131,10 +131,35 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * emails back always matches how this app was actually opened.
  */
 export async function requestPasswordReset(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: Linking.createURL("reset-password"),
-  });
+  const redirectTo = Linking.createURL("reset-password");
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw error;
+}
+
+/**
+ * TEMPORARY — diagnosing why Supabase's /recover endpoint keeps falling
+ * back to the Site URL instead of the redirectTo this app sends. Wraps
+ * global.fetch around the real call so we can see the literal outgoing
+ * request URL, not a value either side merely reports after the fact.
+ * Remove this whole function (and its call site in AuthFlow.tsx) once
+ * confirmed.
+ */
+export async function requestPasswordResetDebug(email: string): Promise<{ redirectTo: string; capturedRequestUrl: string }> {
+  const redirectTo = Linking.createURL("reset-password");
+  let capturedRequestUrl = "(no matching request captured)";
+  const originalFetch = global.fetch;
+  global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url;
+    if (url.includes("/recover")) capturedRequestUrl = url;
+    return originalFetch(input as never, init);
+  }) as typeof fetch;
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  } finally {
+    global.fetch = originalFetch;
+  }
+  return { redirectTo, capturedRequestUrl };
 }
 
 /**

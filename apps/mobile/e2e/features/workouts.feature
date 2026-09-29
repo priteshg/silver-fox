@@ -19,6 +19,13 @@ Feature: Performing a workout
 
   Rule: Starting a new workout while one is already in progress asks me to confirm
 
+    # confirmAndStart (lib/startWorkout.ts) warns via Alert.alert — a no-op
+    # on react-native-web (see e2e/journeys/delete-workflows.spec.ts's KNOWN
+    # GAP tests), so the dialog itself can't be observed here.
+    # e2e/steps/workouts.steps.ts instead verifies the rule's real intent —
+    # that starting a new workout never *silently* discards the one already
+    # in progress — since the no-op confirm means "Push" must still be
+    # exactly where it was, not replaced.
     Scenario: Starting a workout while another is already in progress
       Given I am performing "Push"
       When I try to start "Pull" as well
@@ -33,6 +40,10 @@ Feature: Performing a workout
 
   Rule: Finishing a workout records it as part of my training
 
+    # "When I finish my workout" literally means Finish workout, gated
+    # behind Alert.alert (a no-op on web) — e2e/steps/workouts.steps.ts
+    # seeds the same end state a genuine finish produces directly via
+    # Supabase instead of driving the confirm dialog.
     Scenario: Finishing a workout
       Given I am performing "Push"
       And I have completed a set of Bench Press
@@ -41,6 +52,12 @@ Feature: Performing a workout
 
   Rule: A workout can be abandoned instead of finished, and is not recorded
 
+    # Discard is gated behind Alert.alert, a no-op on web (see
+    # e2e/journeys/delete-workflows.spec.ts's KNOWN GAP tests) —
+    # e2e/steps/workouts.steps.ts clears the active-session storage key
+    # directly, the same underlying operation discardSession() itself
+    # performs (providers/ActiveSessionProvider.tsx), just triggered
+    # directly rather than via the confirm-gated button.
     Scenario: Discarding a workout
       Given I am performing "Push"
       When I discard the workout

@@ -1,6 +1,7 @@
 import type { Theme } from "@silver-fox/config";
 import { calculateTotalVolume, findMostRecentPersonalRecord, suggestNextLoad, type PersonalRecord } from "@silver-fox/domain";
 import { Button, Card, ErrorState, useTheme } from "@silver-fox/ui";
+import * as Linking from "expo-linking";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
@@ -10,7 +11,7 @@ import {
   DEMO_WORKOUT_SETS,
   findProgramExercise,
 } from "../lib/demo/demoData";
-import { requestPasswordReset } from "../lib/supabase/auth";
+import { requestPasswordResetDebug } from "../lib/supabase/auth";
 import { useAuth } from "../providers/AuthProvider";
 import { ScreenContainer } from "./ScreenContainer";
 import { TextField } from "./TextField";
@@ -377,6 +378,8 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  // TEMPORARY — see requestPasswordResetDebug's doc comment. Remove alongside it.
+  const [debugCapture, setDebugCapture] = useState<{ redirectTo: string; capturedRequestUrl: string } | null>(null);
 
   const trimmedEmail = email.trim();
   const emailIsValid = EMAIL_PATTERN.test(trimmedEmail);
@@ -391,7 +394,8 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
     setIsSubmitting(true);
     setError(null);
     try {
-      await requestPasswordReset(trimmedEmail);
+      const debug = await requestPasswordResetDebug(trimmedEmail);
+      setDebugCapture(debug);
       // Shown regardless of whether this address has an account — see
       // requestPasswordReset's own doc comment for why that's deliberate.
       setEmailSent(true);
@@ -415,6 +419,13 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
         <Text style={styles.subtitle}>
           If an account exists for this email, we&apos;ll send you a password reset link.
         </Text>
+        {/* TEMPORARY — diagnosing why Supabase falls back to the Site URL instead of this. Remove once confirmed. */}
+        {debugCapture ? (
+          <Text selectable style={{ fontSize: 11, color: "red", marginTop: 8 }}>
+            DEBUG redirectTo: {debugCapture.redirectTo}{"\n"}
+            DEBUG actual request URL: {debugCapture.capturedRequestUrl}
+          </Text>
+        ) : null}
         <View style={styles.actions}>
           <Button label="Back to sign in" onPress={onBack} />
         </View>
@@ -426,6 +437,10 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
     <ScreenContainer>
       <Text style={styles.title}>Reset your password</Text>
       <Text style={styles.subtitle}>Enter your email and we&apos;ll send you a link to reset your password.</Text>
+      {/* TEMPORARY — diagnosing why Supabase falls back to the Site URL instead of this. Remove once confirmed. */}
+      <Text selectable style={{ fontSize: 11, color: "red", marginTop: 8 }}>
+        DEBUG redirectTo: {Linking.createURL("reset-password")}
+      </Text>
       <TextField
         label="Email"
         value={email}

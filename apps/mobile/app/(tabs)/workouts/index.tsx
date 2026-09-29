@@ -170,7 +170,12 @@ export default function WorkoutsScreen() {
         ) : (
           <View style={styles.list}>
             {allWorkouts.map((entry) => (
-              <View key={entry.workout.id} style={styles.historyRow}>
+              <View
+                key={entry.workout.id}
+                style={styles.historyRow}
+                accessible
+                accessibilityLabel={`${entry.dayName}, completed ${formatRelativeDate(entry.workout.completedAt!)}, ${entry.totalVolume} volume`}
+              >
                 <Text style={styles.historyDayName}>{entry.dayName}</Text>
                 <Text style={styles.historyMeta}>
                   {formatRelativeDate(entry.workout.completedAt!)} · {entry.totalVolume} vol

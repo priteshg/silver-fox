@@ -28,6 +28,13 @@ Feature: Recording workout sets
 
   Rule: Weight starts at a sensible default and changes only in whole-kilogram steps
 
+    @specmismatch
+    # The weight stepper's real step size is 0.5kg (components/SetRow.tsx's
+    # WEIGHT_STEP_KG, confirmed by e2e/journeys/workout-logging.spec.ts's
+    # existing passing test), not the 1kg this scenario's numbers assume —
+    # two clicks moves the total by 1kg, not 2kg. Left undefined rather than
+    # given a step that would either misreport the real step size or
+    # silently use different numbers than the ones written here.
     Scenario: Adjusting weight in fixed steps
       Given I am recording a set for Bench Press
       When I increase the weight twice

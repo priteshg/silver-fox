@@ -6,10 +6,10 @@ Feature: Keeping training data private
   Rule: A person's programmes are private to their own session
 
     Scenario: Programmes are not shared between sessions
-      Given one person has created a programme called "Strength 3 Days"
+      Given one person has created a programme called "E2E Privacy Test Programme"
       And another person has their own PrimeForm session
       When the second person looks at their programme library
-      Then they do not see "Strength 3 Days"
+      Then they do not see "E2E Privacy Test Programme"
 
   Rule: A person's workout history is private to their own session
 

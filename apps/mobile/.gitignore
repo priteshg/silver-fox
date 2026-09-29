@@ -46,3 +46,7 @@ yarn-error.*
 /test-results/
 /playwright-report/
 /e2e/report/
+
+# playwright-bdd — generated spec files from e2e/features/*.feature, rebuilt
+# by `bddgen` before every run; not source, do not hand-edit or commit.
+/e2e/.features-gen/

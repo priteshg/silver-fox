@@ -1,0 +1,5 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cucumber/vscode/main/schemas/cucumber.json",
+  "features": ["e2e/features/**/*.feature"],
+  "glue": ["e2e/steps/**/*.ts", "e2e/fixtures/**/*.ts"]
+}
