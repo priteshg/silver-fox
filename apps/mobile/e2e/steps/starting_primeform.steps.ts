@@ -120,6 +120,17 @@ Then("I am not shown the example demo either", async ({ page }) => {
 });
 
 Given("PrimeForm cannot be reached right now", async ({ page }) => {
+  // The app's own retry/backoff before it gives up and shows "Couldn't
+  // connect" already took ~28.5s in an earlier, lighter run — close enough
+  // to the suite's 30s per-test ceiling (playwright.config.ts) that under
+  // headed mode's heavier load it can eat the *entire* budget, leaving
+  // nothing for this scenario's own After() hooks to run in (surfacing as
+  // "Test timeout ... while running afterEach hook" — misleading, since
+  // it's not that a hook hung, it's that none of the 30s was left for it).
+  // This is real app behavior being measured, not a test inefficiency, so
+  // the fix is more time for this one scenario, not a shorter wait.
+  test.setTimeout(60_000);
+
   // A *valid, non-expired* cached session needs no network at all to
   // restore (supabase-js's getSession() just reads local storage) —
   // confirmed directly: blocking every Supabase request alone still
@@ -147,13 +158,27 @@ Then("I am told PrimeForm could not connect", async ({ page }) => {
 
 Then("I am offered a way to try again", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Try Again" })).toBeVisible();
+  // The route block above has no natural end within this scenario —
+  // restoring it before this scenario's own After() hooks run (global
+  // across every step file, not just this one) means none of them can be
+  // blocked by a leftover route from a scenario they have nothing to do
+  // with.
+  await page.unroute("**/*.supabase.co/**");
 });
 
 When("I create an account", async ({ page, scenarioState }) => {
   const email = uniqueTestEmail("create_account");
   scenarioState.adminCreatedAccountEmail = email;
 
-  await page.getByRole("button", { name: "Create account" }).click();
+  // The very first click on a cold page load can land a beat before React
+  // finishes attaching its handlers (documented directly in
+  // demo_experience.steps.ts's startUnauthenticated — a hydration-timing
+  // race in the test, not a product bug); retrying the click until the
+  // form it should reveal actually shows up survives that.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Create account" }).click({ timeout: 2_000 });
+    await expect(page.getByLabel("Email")).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 10_000 });
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_ACCOUNT_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -229,7 +254,11 @@ When("I sign in", async ({ page, scenarioState }) => {
   await page.reload();
   await expect(page.getByText("PrimeForm", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign in" }).click();
+  // Same cold-page-load click race as "I create an account" above.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Sign in" }).click({ timeout: 2_000 });
+    await expect(page.getByLabel("Email")).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 10_000 });
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_ACCOUNT_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();

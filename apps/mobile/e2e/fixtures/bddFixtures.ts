@@ -42,6 +42,12 @@ const env = loadEnv();
  * throw or reject when that happens — it resolves with `error` set. Checking
  * that result and retrying with a fresh localStorage read (the app's refresh
  * has normally completed by the next attempt) is what actually recovers.
+ * The budget below (6 attempts, 500ms apart — up to 3s) was widened from an
+ * earlier, tighter one (3 attempts, 300ms) after confirming directly that
+ * under heavier concurrent load — headed mode running several real browser
+ * windows at once, not headless — that smaller budget still wasn't enough:
+ * the race window this is absorbing scales with how contended the machine
+ * is, not with a fixed cost.
  */
 async function readTestUserSession(page: import("@playwright/test").Page): Promise<{ access_token: string; refresh_token: string } | null> {
   const storageKey = await page.evaluate(() => Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token")));
@@ -52,14 +58,23 @@ async function readTestUserSession(page: import("@playwright/test").Page): Promi
 
 async function buildTestUserClient(page: import("@playwright/test").Page): Promise<SupabaseClient | null> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     const session = await readTestUserSession(page);
     if (!session) return null;
     const client = createClient(env.url, env.anonKey);
-    const { error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
-    if (!error) return client;
-    lastError = error;
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // setSession() can REJECT (AuthSessionMissingError), not just resolve
+    // with `error` set — confirmed directly: an uncaught rejection here
+    // skipped the retry loop entirely, the exact same shape of bug already
+    // fixed once in seedWorkoutHistory.ts's getUserWithRetry, recurring
+    // here because this sibling call wasn't given the same try/catch.
+    try {
+      const { error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+      if (!error) return client;
+      lastError = error;
+    } catch (err) {
+      lastError = err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw lastError;
 }

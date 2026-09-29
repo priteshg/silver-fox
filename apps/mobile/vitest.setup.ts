@@ -44,6 +44,13 @@ vi.mock("./lib/supabase/auth", () => ({
   signUpWithEmail: vi.fn(async () => ({ status: "signed_in", userId: TEST_USER_ID })),
   signOut: vi.fn(async () => {}),
   requestPasswordReset: vi.fn(async () => {}),
+  // ForgotPasswordScreen (components/AuthFlow.tsx) currently calls this, not
+  // requestPasswordReset — a TEMPORARY detour for the still-open
+  // password-reset redirect_to investigation (see that function's own doc
+  // comment in lib/supabase/auth.ts). Mocked here so AuthFlow.test.tsx
+  // exercises what the component actually calls, not what it will call once
+  // that debug code is removed.
+  requestPasswordResetDebug: vi.fn(async () => ({ redirectTo: "primeform://reset-password", capturedRequestUrl: "(mocked)" })),
   exchangeRecoveryCode: vi.fn(async () => {}),
   updatePassword: vi.fn(async () => {}),
 }));
@@ -63,6 +70,16 @@ vi.mock("expo-haptics", () => ({
   notificationAsync: async () => {},
   ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy" },
   NotificationFeedbackType: { Success: "success", Warning: "warning", Error: "error" },
+}));
+
+// expo-linking pulls in expo-modules-core, which reads globalThis.expo (set
+// by the real native runtime, not present under jsdom) — components/
+// AuthFlow.tsx imports it directly (a debug-only Linking.createURL call, see
+// its own TEMPORARY comment), which otherwise crashes every test in the file
+// before a single one runs: not a per-test failure, a failure to even
+// collect the suite (confirmed directly: 0 tests reported, not 1 failing).
+vi.mock("expo-linking", () => ({
+  createURL: (path: string) => `primeform://${path}`,
 }));
 
 afterEach(cleanup);

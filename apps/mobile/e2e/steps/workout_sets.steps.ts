@@ -1,6 +1,7 @@
 import { createBdd } from "playwright-bdd";
 import { expect, test } from "../fixtures/bddFixtures";
-import { SEEDED_WORKOUT_PREFIX, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { cleanupSeededWorkouts, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { ensureFoundation40PlusActiveThenGoToWorkouts } from "../support/ensureFoundation40Plus";
 
 const { Given, When, Then, After } = createBdd(test);
 
@@ -12,7 +13,7 @@ After(async ({ workoutPage, cleanupSupabaseAsTestUser }) => {
   await workoutPage.discardViaStorage();
   const supabase = await cleanupSupabaseAsTestUser();
   if (!supabase) return;
-  await supabase.from("workouts").delete().like("id", `${SEEDED_WORKOUT_PREFIX}%`);
+  await cleanupSeededWorkouts(supabase);
 });
 
 Given("I recorded {int} kg for {int} repetitions of Bench Press last time", async ({ workoutPage, supabaseAsTestUser }, weightKg: number, reps: number) => {
@@ -24,8 +25,8 @@ Given("I recorded {int} kg for {int} repetitions of Bench Press last time", asyn
   await seedCompletedWorkout(supabase, "Bench Press", weightKg, reps);
 });
 
-When("I start recording a new set of Bench Press", async ({ workoutPage }) => {
-  await workoutPage.open();
+When("I start recording a new set of Bench Press", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
 });
 
@@ -33,8 +34,8 @@ Then("I can see that I recorded {int} kg for {int} repetitions last time", async
   await expect(page.getByText(new RegExp(`Last time:\\s*${weightKg} kg × ${reps}`))).toBeVisible({ timeout: 10_000 });
 });
 
-Given("I am performing today's workout", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("I am performing today's workout", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
 });
 
@@ -67,8 +68,8 @@ Then("the set is not completed", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Complete set 1" })).toBeVisible();
 });
 
-Given("I am recording a set with a weight of {int} kg", async ({ workoutPage }, weightKg: number) => {
-  await workoutPage.open();
+Given("I am recording a set with a weight of {int} kg", async ({ workoutPage, programmesPage }, weightKg: number) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.setWeightKg(weightKg);
 });
@@ -97,8 +98,8 @@ Then("my workout records {int} repetitions in reserve for that set", async ({ wo
   await expect(workoutPage.ripLabelFor(0)).toHaveValue(String(rir));
 });
 
-Given("I have completed a set of {int} kg for {int} repetitions", async ({ workoutPage }, weightKg: number, reps: number) => {
-  await workoutPage.open();
+Given("I have completed a set of {int} kg for {int} repetitions", async ({ workoutPage, programmesPage }, weightKg: number, reps: number) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.setWeightKg(weightKg);
   await workoutPage.fillReps(0, String(reps));

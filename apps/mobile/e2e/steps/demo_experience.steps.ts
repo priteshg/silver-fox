@@ -81,7 +81,15 @@ When("I create an account from the demo", async ({ page, scenarioState }) => {
   const email = uniqueTestEmail("demo_signup");
   scenarioState.demoAccountEmail = email;
 
-  await page.getByRole("button", { name: "Create your own PrimeForm account" }).click();
+  // The click race documented in startUnauthenticated() above (a beat
+  // before React finishes attaching handlers on a cold render) — retrying
+  // the click until the form it should reveal actually appears survives
+  // it, same as e2e/steps/starting_primeform.steps.ts's own "I create an
+  // account" step.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Create your own PrimeForm account" }).click({ timeout: 2_000 });
+    await expect(page.getByLabel("Email")).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 10_000 });
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_ACCOUNT_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();

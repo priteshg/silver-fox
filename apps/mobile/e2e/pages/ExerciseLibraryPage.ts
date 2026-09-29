@@ -8,7 +8,14 @@ export class ExerciseLibraryPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.searchField = page.getByLabel("Search");
-    this.countLabel = page.getByText(/\d+ exercises/);
+    // Anchored to the whole text, not a substring match — Home's own
+    // "Today's Plan" card renders "{count} exercises · ~{min} min" (see
+    // app/(tabs)/index.tsx), which an unanchored /\d+ exercises/ also
+    // matches whenever that card is still in the DOM during/after
+    // navigating here (confirmed directly: a strict-mode violation with
+    // both matched simultaneously). The library's own count is always a
+    // bare "{count} exercises" with no suffix.
+    this.countLabel = page.getByText(/^\d+ exercises$/);
   }
 
   async waitForReady(): Promise<void> {

@@ -1,6 +1,7 @@
 import { createBdd } from "playwright-bdd";
 import { expect, test } from "../fixtures/bddFixtures";
 import { seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { ensureFoundation40PlusActiveThenGoToWorkouts } from "../support/ensureFoundation40Plus";
 
 const { Given, When, Then, After } = createBdd(test);
 
@@ -20,8 +21,8 @@ After(async ({ workoutPage, cleanupSupabaseAsTestUser }) => {
   if (mine?.length) await supabase.from("workouts").delete().in("id", mine.map((w) => w.id));
 });
 
-Given("today's workout contains Bench Press", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("today's workout contains Bench Press", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
 });
 
@@ -34,8 +35,8 @@ Then("PrimeForm shows suitable alternatives", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Use /i }).first()).toBeVisible();
 });
 
-Given("I am training at home", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("I am training at home", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.openSubstitute();
 });
@@ -55,8 +56,8 @@ Then("PrimeForm only recommends alternatives that use dumbbells or bodyweight", 
   await expect(page.getByText("Machine Chest Press")).not.toBeVisible();
 });
 
-Given("my programme contains Bench Press", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("my programme contains Bench Press", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
 });
 
@@ -96,8 +97,8 @@ Then("today's workout still contains Bench Press", async ({ page }) => {
   await expect(page.getByText("Bench Press", { exact: true }).first()).toBeVisible();
 });
 
-Given("I substituted Bench Press with Dumbbell Bench Press", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("I substituted Bench Press with Dumbbell Bench Press", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.openSubstitute();
   await workoutPage.selectEquipment("dumbbell");
@@ -129,8 +130,8 @@ When("I substitute again with Push-Up", async ({ workoutPage }) => {
   await workoutPage.useSubstitute("Push-Up");
 });
 
-Given("I have logged a completed set of Bench Press today", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("I have logged a completed set of Bench Press today", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.completeFirstSet("8");
 });

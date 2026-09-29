@@ -59,8 +59,16 @@ export function AuthFlow() {
       <DemoScreen
         onLeave={exitDemo}
         onCreateAccount={() => {
+          // exitDemo() is required, not just setScreen("sign_up") — viewMode
+          // (owned by AuthProvider) still reads "demo" otherwise, and the
+          // check above returns DemoScreen again on the very next render
+          // regardless of `screen`, so the signup form could never actually
+          // be reached from here. Confirmed directly: without this, clicking
+          // "Create your own PrimeForm account" was a complete no-op, in the
+          // real app and not just in tests.
           setCameFromDemo(true);
           setScreen("sign_up");
+          exitDemo();
         }}
       />
     );

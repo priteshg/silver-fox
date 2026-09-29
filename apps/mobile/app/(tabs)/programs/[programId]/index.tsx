@@ -211,7 +211,13 @@ export default function ProgramDetailScreen() {
           <View style={styles.headerActions}>
             <Button label="Edit Details" variant="secondary" onPress={startEditing} />
             {!isActive ? (
-              <Button label="Make My Programme" onPress={() => void selectProgram(detail.program.id)} />
+              <Button
+                label="Make My Programme"
+                onPress={() => {
+                  setActionError(null);
+                  selectProgram(detail.program.id).catch((err) => setActionError(describeError(err)));
+                }}
+              />
             ) : null}
           </View>
         </Card>

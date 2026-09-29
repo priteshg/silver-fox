@@ -17,7 +17,7 @@ function loadServiceRoleKey(): string {
     throw new Error(
       "apps/mobile/.env.test.local is missing — copy .env.test.local.example to .env.test.local and fill in " +
         "the project's service_role key (Project Settings -> API in the Supabase dashboard). Needed only for " +
-        "the @signupgap-turned-real scenarios that mint or confirm test accounts via the Admin API.",
+        "scenarios (some tagged @emailDependency) that mint or confirm test accounts via the Admin API.",
     );
   }
   const text = readFileSync(envPath, "utf8");

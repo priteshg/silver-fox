@@ -1,10 +1,11 @@
 import { createBdd } from "playwright-bdd";
 import { expect, test } from "../fixtures/bddFixtures";
 import {
-  SEEDED_WORKOUT_PREFIX,
+  cleanupSeededWorkouts,
   resolveBuiltInProgramDay,
   seedCompletedWorkout,
 } from "../support/seedWorkoutHistory";
+import { ensureFoundation40PlusActiveThenGoToWorkouts } from "../support/ensureFoundation40Plus";
 
 const { Given, When, Then, After } = createBdd(test);
 
@@ -27,11 +28,23 @@ function historyRowLabel(dayName: string): RegExp {
   return new RegExp(`^${dayName}, completed .*, ${SEEDED_VOLUME} volume$`);
 }
 
+// "E2E History Check Programme" cleanup lives here, not inline in "the
+// historical workout still reflects..." below — confirmed directly that a
+// scenario failing at an *earlier* step (before reaching that Then) left
+// this row behind uncleaned, and since it carries no unique-name guard,
+// each such leftover run accumulated another same-named orphan, which then
+// confused a *later* run's own "Make My Programme" write (ProgrammesPage.ts's
+// own comment on makeMyProgrammeFromDetail has more on that write's
+// transient-failure retry). An After() hook runs regardless of which step
+// failed, so cleanup here can't be skipped the same way.
+const CREATED_PROGRAMME_NAME = "E2E History Check Programme";
+
 After(async ({ workoutPage, cleanupSupabaseAsTestUser }) => {
   await workoutPage.discardViaStorage();
   const supabase = await cleanupSupabaseAsTestUser();
   if (!supabase) return;
-  await supabase.from("workouts").delete().like("id", `${SEEDED_WORKOUT_PREFIX}%`);
+  await cleanupSeededWorkouts(supabase);
+  await supabase.from("programs").delete().eq("name", CREATED_PROGRAMME_NAME);
 });
 
 async function seedPushWorkout({ supabaseAsTestUser }: { supabaseAsTestUser: () => Promise<import("@supabase/supabase-js").SupabaseClient> }) {
@@ -82,21 +95,19 @@ Given("I completed a workout using my previous programme", async ({ workoutPage,
 When("I later change the programme", async ({ programmesPage }) => {
   await programmesPage.open();
   await programmesPage.startCreating();
-  await programmesPage.fillName("E2E History Check Programme");
+  await programmesPage.fillName(CREATED_PROGRAMME_NAME);
   await programmesPage.createProgramme();
   await programmesPage.waitForDetailReady();
   await programmesPage.makeMyProgrammeFromDetail();
 });
 
-Then("the historical workout still reflects what I actually performed", async ({ workoutPage, page, supabaseAsTestUser }) => {
+Then("the historical workout still reflects what I actually performed", async ({ workoutPage, page }) => {
   await workoutPage.open();
   await expect(page.getByLabel(historyRowLabel("Push"))).toBeVisible({ timeout: 10_000 });
-  const supabase = await supabaseAsTestUser();
-  await supabase.from("programs").delete().eq("name", "E2E History Check Programme");
 });
 
-Given("I discarded a workout of \"Push\" without finishing it", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("I discarded a workout of \"Push\" without finishing it", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.discardViaStorage();
 });

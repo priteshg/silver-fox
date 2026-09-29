@@ -81,6 +81,30 @@ export async function seedCompletedWorkout(
   return workoutId;
 }
 
+/**
+ * Deletes every seeded workout this worker's account holds. Every BDD step
+ * file that calls seedCompletedWorkout must call this in its own After()
+ * hook — but a bare `await supabase.from("workouts").delete()...` there
+ * never checks the result, so a transient failure (the same class of
+ * Supabase session hiccup documented on getUserWithRetry above, or any
+ * other transient error) leaves the row behind with nothing surfaced
+ * anywhere: not a thrown error, not a log, nothing — confirmed directly as
+ * the cause of an intermittent "resolved to 2 elements" strict-mode
+ * violation in a later, unrelated scenario that seeded the identical
+ * fixture and collided with the orphan. Checking the error and retrying a
+ * couple of times is what actually closes that gap.
+ */
+export async function cleanupSeededWorkouts(supabase: SupabaseClient): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { error } = await supabase.from("workouts").delete().like("id", `${SEEDED_WORKOUT_PREFIX}%`);
+    if (!error) return;
+    lastError = error;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  console.error("cleanupSeededWorkouts: failed to delete seeded workouts after retries", lastError);
+}
+
 /** Foundation 40+'s program id and a named training day's id, for tagging a seeded workout so it displays under that day's real name (workoutRepository/useWorkoutHome falls back to "Workout" when session_id is unset). */
 export async function resolveBuiltInProgramDay(
   supabase: SupabaseClient,

@@ -1,6 +1,7 @@
 import { createBdd } from "playwright-bdd";
 import { expect, test } from "../fixtures/bddFixtures";
-import { SEEDED_WORKOUT_PREFIX, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { cleanupSeededWorkouts, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { ensureFoundation40PlusActiveThenGoToWorkouts } from "../support/ensureFoundation40Plus";
 
 const { Given, When, Then, After } = createBdd(test);
 
@@ -11,29 +12,8 @@ After(async ({ workoutPage, cleanupSupabaseAsTestUser }) => {
   const supabase = await cleanupSupabaseAsTestUser();
   if (!supabase) return;
   await supabase.from("programs").delete().eq("name", CREATED_PROGRAMME_NAME);
-  await supabase.from("workouts").delete().like("id", `${SEEDED_WORKOUT_PREFIX}%`);
+  await cleanupSeededWorkouts(supabase);
 });
-
-/**
- * Ensures Foundation 40+ is active, then switches to the Workouts tab via
- * in-app tab navigation (not workoutPage.open(), which does a full
- * page.goto("/") reload) — chaining two full reloads back to back (one for
- * the Programmes-tab visit, one for Workouts) raced the app's own
- * auth/session-restoration on the second reload, confirmed directly: it
- * intermittently left "Start Push" clickable-looking but structurally
- * inert, with no visible error and no navigation on click.
- */
-async function ensureFoundation40PlusActiveThenGoToWorkouts(
-  programmesPage: import("../pages/ProgrammesPage").ProgrammesPage,
-  workoutPage: import("../pages/WorkoutPage").WorkoutPage,
-) {
-  await programmesPage.open();
-  if (!(await programmesPage.isActiveOnList("Foundation 40+"))) {
-    await programmesPage.makeMyProgrammeFromList("Foundation 40+");
-  }
-  await programmesPage.goToTab("Workouts");
-  await workoutPage.waitForReady();
-}
 
 Given('"Push" is today\'s training day in the programme I am following', async ({ workoutPage, programmesPage }) => {
   await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);

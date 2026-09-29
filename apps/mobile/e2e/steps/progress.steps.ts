@@ -1,6 +1,7 @@
 import { createBdd } from "playwright-bdd";
 import { expect, test } from "../fixtures/bddFixtures";
-import { SEEDED_WORKOUT_PREFIX, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { cleanupSeededWorkouts, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { ensureFoundation40PlusActiveThenGoToWorkouts } from "../support/ensureFoundation40Plus";
 
 const { Given, When, Then, After } = createBdd(test);
 
@@ -8,7 +9,7 @@ After(async ({ workoutPage, cleanupSupabaseAsTestUser }) => {
   await workoutPage.discardViaStorage();
   const supabase = await cleanupSupabaseAsTestUser();
   if (!supabase) return;
-  await supabase.from("workouts").delete().like("id", `${SEEDED_WORKOUT_PREFIX}%`);
+  await cleanupSeededWorkouts(supabase);
 });
 
 Given("I have finished a workout including a completed set of Bench Press", async ({ workoutPage, supabaseAsTestUser }) => {
@@ -25,8 +26,8 @@ Then("that workout is reflected in my progress", async ({ progressPage }) => {
   await expect(progressPage.strengthRowFor("Bench Press")).toBeVisible({ timeout: 10_000 });
 });
 
-Given("I discarded a workout without finishing it", async ({ workoutPage }) => {
-  await workoutPage.open();
+Given("I discarded a workout without finishing it", async ({ workoutPage, programmesPage }) => {
+  await ensureFoundation40PlusActiveThenGoToWorkouts(programmesPage, workoutPage);
   await workoutPage.startFirstDay();
   await workoutPage.discardViaStorage();
 });

@@ -116,17 +116,27 @@ describe("SetRow", () => {
     expect(onComplete).toHaveBeenCalledWith("set_1", { weight: 25, reps: 6, rir: undefined });
   });
 
-  it("weight cannot go below zero or above the sensible maximum", () => {
-    render(<SetRow setId="set_1" setNumber={1} completed={false} onComplete={noop} onUncomplete={noop} />);
+  it(
+    "weight cannot go below zero or above the sensible maximum",
+    () => {
+      render(<SetRow setId="set_1" setNumber={1} completed={false} onComplete={noop} onUncomplete={noop} />);
 
-    const decrease = screen.getByRole("button", { name: "Decrease weight" });
-    for (let i = 0; i < 45; i++) fireEvent.click(decrease); // far more than the default (20) can absorb at 0.5kg per click
-    expect(screen.getByLabelText("kg: 0")).toBeInTheDocument();
+      const decrease = screen.getByRole("button", { name: "Decrease weight" });
+      for (let i = 0; i < 45; i++) fireEvent.click(decrease); // far more than the default (20) can absorb at 0.5kg per click
+      expect(screen.getByLabelText("kg: 0")).toBeInTheDocument();
 
-    const increase = screen.getByRole("button", { name: "Increase weight" });
-    for (let i = 0; i < 1010; i++) fireEvent.click(increase); // 0 -> 505, more than the 500kg ceiling at 0.5kg per click
-    expect(screen.getByLabelText("kg: 500")).toBeInTheDocument();
-  });
+      const increase = screen.getByRole("button", { name: "Increase weight" });
+      for (let i = 0; i < 1010; i++) fireEvent.click(increase); // 0 -> 505, more than the 500kg ceiling at 0.5kg per click
+      expect(screen.getByLabelText("kg: 500")).toBeInTheDocument();
+    },
+    // 1,055 synchronous clicks (each a state update + re-render) is far more
+    // work than any neighboring test in this file — not a race, just a CPU
+    // budget the shared 5000ms default wasn't sized for. Confirmed directly:
+    // passes reliably in isolation every time, only times out as part of the
+    // full suite's cumulative jsdom/setup overhead (130 tests, 22 separate
+    // jsdom environments — see vitest's own perf warning on a full run).
+    10_000,
+  );
 
   // The progression engine (loadProgression.ts) can suggest a weight rounded
   // to the nearest half kilogram (e.g. 82.5) — these four tests confirm the

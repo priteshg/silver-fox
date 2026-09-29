@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { requestPasswordReset } from "../../lib/supabase/auth";
+import { requestPasswordResetDebug } from "../../lib/supabase/auth";
 import { AuthProvider } from "../../providers/AuthProvider";
 import { AuthFlow } from "../AuthFlow";
 
@@ -21,8 +21,8 @@ async function goToSignIn() {
 
 describe("AuthFlow — forgot password", () => {
   beforeEach(() => {
-    vi.mocked(requestPasswordReset).mockReset();
-    vi.mocked(requestPasswordReset).mockResolvedValue(undefined);
+    vi.mocked(requestPasswordResetDebug).mockReset();
+    vi.mocked(requestPasswordResetDebug).mockResolvedValue({ redirectTo: "primeform://reset-password", capturedRequestUrl: "(mocked)" });
   });
 
   it("navigates from the sign-in screen to the reset-request screen", async () => {
@@ -31,7 +31,7 @@ describe("AuthFlow — forgot password", () => {
     expect(await screen.findByText("Reset your password")).toBeInTheDocument();
   });
 
-  it("rejects an invalid email format without calling requestPasswordReset", async () => {
+  it("rejects an invalid email format without calling requestPasswordResetDebug", async () => {
     await goToSignIn();
     fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
     await screen.findByText("Reset your password");
@@ -40,7 +40,7 @@ describe("AuthFlow — forgot password", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(await screen.findByText("Enter a valid email address.")).toBeInTheDocument();
-    expect(requestPasswordReset).not.toHaveBeenCalled();
+    expect(requestPasswordResetDebug).not.toHaveBeenCalled();
   });
 
   it("submits a valid email and shows the same confirmation whether or not the account exists", async () => {
@@ -57,11 +57,11 @@ describe("AuthFlow — forgot password", () => {
     expect(
       screen.getByText("If an account exists for this email, we'll send you a password reset link."),
     ).toBeInTheDocument();
-    await waitFor(() => expect(requestPasswordReset).toHaveBeenCalledWith("person@example.com"));
+    await waitFor(() => expect(requestPasswordResetDebug).toHaveBeenCalledWith("person@example.com"));
   });
 
   it("shows a generic error (not an email-enumeration signal) when the request itself fails", async () => {
-    vi.mocked(requestPasswordReset).mockRejectedValueOnce(new Error("Network request failed"));
+    vi.mocked(requestPasswordResetDebug).mockRejectedValueOnce(new Error("Network request failed"));
     await goToSignIn();
     fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
     await screen.findByText("Reset your password");
@@ -80,5 +80,22 @@ describe("AuthFlow — forgot password", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Back to sign in" }));
     expect(await screen.findByRole("button", { name: "Forgot password?" })).toBeInTheDocument();
+  });
+});
+
+describe("AuthFlow — creating an account from the demo", () => {
+  it("reaches the real signup form, not the demo screen again", async () => {
+    // Regression test: viewMode ("demo") is checked ahead of screen
+    // ("sign_up") in AuthFlow's render order — setting screen alone had no
+    // visible effect while viewMode was still "demo", so this button was a
+    // complete no-op (confirmed directly, not a timing issue: reproduced
+    // 100% of the time, serialized or parallel). Fixed by also calling
+    // exitDemo() in the same handler.
+    renderAuthFlow();
+    fireEvent.click(await screen.findByRole("button", { name: "See a demo" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Create your own PrimeForm account" }));
+
+    expect(await screen.findByLabelText("Email")).toBeInTheDocument();
+    expect(screen.queryByText("DEMO — example data, not saved")).not.toBeInTheDocument();
   });
 });

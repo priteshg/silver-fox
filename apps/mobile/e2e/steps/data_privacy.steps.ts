@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures/bddFixtures";
 import { ProgrammesPage } from "../pages/ProgrammesPage";
 import { WorkoutPage } from "../pages/WorkoutPage";
-import { SEEDED_WORKOUT_PREFIX, resolveBuiltInProgramDay, seedCompletedWorkout } from "../support/seedWorkoutHistory";
+import { cleanupSeededWorkouts, resolveBuiltInProgramDay, seedCompletedWorkout } from "../support/seedWorkoutHistory";
 
 const { Given, When, Then, After } = createBdd(test);
 
@@ -11,7 +11,7 @@ After(async ({ cleanupSupabaseAsTestUser, scenarioState }) => {
   const supabase = await cleanupSupabaseAsTestUser();
   if (supabase) {
     await supabase.from("programs").delete().ilike("name", "E2E Privacy Test%");
-    await supabase.from("workouts").delete().like("id", `${SEEDED_WORKOUT_PREFIX}%`);
+    await cleanupSeededWorkouts(supabase);
   }
   // The second person's own browser context (opened directly via
   // browser.newContext(), not through Playwright's own page/context

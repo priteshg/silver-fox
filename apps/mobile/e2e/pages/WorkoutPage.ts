@@ -20,8 +20,22 @@ export class WorkoutPage extends BasePage {
     // scenarios intend to exercise that confirm path, so start from a
     // guaranteed-clean slate rather than depending on one never existing.
     await this.discardViaStorage();
-    await this.page.getByRole("button", { name: /^Start /i }).first().click();
-    await expect(this.page.getByRole("button", { name: "Finish workout" })).toBeVisible({ timeout: 10_000 });
+    // waitForReady() (run by the caller before this) only confirms *some*
+    // Start button is visible, not that the active programme's own data has
+    // finished settling — the day list can still re-render once it has
+    // (same async-write-settling shape as selectProgram()/moveExercise()
+    // elsewhere in this suite), replacing this exact button element out
+    // from under a one-shot click. Confirmed directly under heavier load
+    // (headed mode, several browser windows at once): the button briefly
+    // goes enabled → detached/disabled → re-rendered, outlasting
+    // Playwright's own per-click actionability retry window. Retrying the
+    // whole click-and-verify as one unit, not just the click, is what
+    // survives that — a fresh locator query each attempt, not the same
+    // handle waiting to stabilize.
+    await expect(async () => {
+      await this.page.getByRole("button", { name: /^Start /i }).first().click({ timeout: 2_000 });
+      await expect(this.page.getByRole("button", { name: "Finish workout" })).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
   }
 
   startButtonFor(dayName: string): Locator {

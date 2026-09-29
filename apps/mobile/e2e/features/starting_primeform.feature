@@ -13,12 +13,18 @@ Feature: Starting PrimeForm
 
   Rule: Creating an account is how someone starts using PrimeForm for real
 
-    # Real signup form, then the Admin API stands in for clicking the
-    # emailed confirmation link (this project has email confirmation
-    # enabled — see lib/supabase/auth.ts's SignUpResult doc comment; no
-    # browser-only run can click a real inbox link), then the real Sign In
-    # screen — see e2e/steps/starting_primeform.steps.ts and
-    # e2e/support/adminAuth.ts.
+    @emailDependency
+    # Real signup form, submitted with a real, deliverable address (this
+    # project has email confirmation enabled — see lib/supabase/auth.ts's
+    # SignUpResult doc comment — and Supabase's own signup validation
+    # rejects reserved/undeliverable domains outright, confirmed directly).
+    # That means every run of this scenario sends a real email and spends
+    # one slot of this project's shared Supabase email rate limit (no
+    # custom SMTP configured) — excluded from the normal suite for that
+    # reason (`pnpm run test:e2e:email` runs it explicitly). The Admin API
+    # only stands in for clicking the emailed confirmation link (no
+    # browser-only run can do that), then the real Sign In screen — see
+    # e2e/steps/starting_primeform.steps.ts and e2e/support/adminAuth.ts.
     Scenario: Creating an account
       Given I have never used PrimeForm before
       When I create an account
@@ -27,10 +33,13 @@ Feature: Starting PrimeForm
 
   Rule: Someone with an account can sign in on this device
 
-    # The fixture account is minted directly via the Admin API (a real,
-    # disposable, already-confirmed account — see e2e/support/adminAuth.ts),
-    # not the project maintainer's own account; the sign-in itself drives
-    # the real screen.
+    # Not @emailDependency: the fixture account is minted directly via the
+    # Admin API with email_confirm already true (see
+    # e2e/support/adminAuth.ts's createConfirmedTestAccount) — confirmed
+    # directly that this sends no email at all, unlike a real signUp()
+    # call, so this scenario is free to stay in the normal suite. Not the
+    # project maintainer's own account either — a real, disposable fixture.
+    # The sign-in itself drives the real screen.
     Scenario: Signing in
       Given I already have a PrimeForm account
       When I sign in

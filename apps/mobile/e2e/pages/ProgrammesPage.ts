@@ -93,7 +93,6 @@ export class ProgrammesPage extends BasePage {
 
   async makeMyProgrammeFromDetail(): Promise<void> {
     const button = this.page.getByRole("button", { name: "Make My Programme" });
-    await button.click();
     // Persisting the selection is an async write (lib/repositories/userRepository.ts's
     // setActiveProgramId) — Playwright's click() only waits for the event
     // dispatch, not that in-flight await, so wait for this button to
@@ -104,7 +103,16 @@ export class ProgrammesPage extends BasePage {
     // already show a *different* programme's "Active" badge (e.g. from an
     // earlier scenario reusing this worker's account), making "Active" text
     // ambiguous — this button's exact name only ever exists on this screen.
-    await expect(button).toHaveCount(0);
+    // Retrying the whole click-and-verify as one unit (not just the
+    // click), same as WorkoutPage.startFirstDay(): confirmed directly that
+    // this write can transiently fail — the button's onPress now surfaces
+    // that as a real error banner instead of swallowing it, but a genuine
+    // user seeing that error would just tap the button again, so this does
+    // too, rather than failing the whole scenario on a single hiccup.
+    await expect(async () => {
+      await button.click({ timeout: 2_000 });
+      await expect(button).toHaveCount(0, { timeout: 3_000 });
+    }).toPass({ timeout: 15_000 });
   }
 
   async addExercise(): Promise<void> {

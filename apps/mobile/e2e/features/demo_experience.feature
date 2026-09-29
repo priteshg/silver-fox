@@ -21,6 +21,7 @@ Feature: Trying PrimeForm before creating an account
 
   Rule: Someone who likes the demo programme can create an account and keep it
 
+    @emailDependency
     # "Create an account" from Demo always hits this project's real, enabled
     # email confirmation requirement (see lib/supabase/auth.ts's
     # SignUpResult doc comment), so "Keep the demo programme?" can only
@@ -31,7 +32,12 @@ Feature: Trying PrimeForm before creating an account
     # providers/AuthProvider.tsx and supabase/migrations), not local state,
     # specifically so it survives that gap. e2e/steps/demo_experience.steps.ts
     # uses the Admin API only to stand in for clicking the emailed
-    # confirmation link; every other step drives the real screens.
+    # confirmation link; every other step drives the real screens. The
+    # signup form itself is submitted with a real, deliverable address
+    # (Supabase's own signup validation rejects reserved domains outright)
+    # and sends a real email, spending one slot of this project's shared
+    # rate limit each run — excluded from the normal suite for that reason
+    # (`pnpm run test:e2e:email` runs it explicitly).
     Scenario: Choosing to use the demo programme after confirming by email
       Given I am looking at the demo
       When I create an account from the demo
@@ -45,6 +51,9 @@ Feature: Trying PrimeForm before creating an account
 
   Rule: Someone can create an account from the demo without keeping anything from it
 
+    @emailDependency
+    # Same real-signup/real-email reasoning as "Choosing to use the demo
+    # programme after confirming by email" above.
     Scenario: Starting fresh instead of keeping the demo programme
       Given I am looking at the demo
       When I create an account from the demo
