@@ -88,3 +88,33 @@ export async function setActiveProgramId(programId: ProgramId): Promise<void> {
     .eq("id", userId);
   if (error) throw error;
 }
+
+/**
+ * Whether this account still owes the "Use this programme?" / "Start
+ * fresh?" choice from a demo-originated signup (see
+ * providers/AuthProvider.tsx). Deliberately outside the domain `User`
+ * entity — this is an auth-flow bookkeeping flag, not a business-meaningful
+ * profile attribute — and read directly rather than through `getProfile()`
+ * so callers checking it right after signIn()/session-restoration don't pay
+ * for the rest of the profile row they don't need.
+ */
+export async function getPendingDemoProgramChoice(): Promise<boolean> {
+  const userId = getCurrentUserIdSync();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("pending_demo_program_choice")
+    .eq("id", userId)
+    .single();
+  if (error) throw error;
+  return Boolean((data as { pending_demo_program_choice: boolean }).pending_demo_program_choice);
+}
+
+/** Clears the pending demo-programme choice once the person has resolved it (either way). */
+export async function setPendingDemoProgramChoice(pending: boolean): Promise<void> {
+  const userId = getCurrentUserIdSync();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ pending_demo_program_choice: pending, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) throw error;
+}

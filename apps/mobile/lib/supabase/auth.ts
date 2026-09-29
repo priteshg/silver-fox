@@ -91,9 +91,23 @@ export async function restoreExistingSession(): Promise<UserId | null> {
  */
 export type SignUpResult = { status: "signed_in"; userId: UserId } | { status: "confirmation_required" };
 
-/** Creates a real, credentialed account. Distinct from `signInAnonymously` — this is the only way `packages/domain`'s "Authenticated" state should be reached going forward. */
-export async function signUpWithEmail(email: string, password: string): Promise<SignUpResult> {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+/**
+ * Creates a real, credentialed account. Distinct from `signInAnonymously` — this is the only way `packages/domain`'s "Authenticated" state should be reached going forward.
+ *
+ * `fromDemo` is carried in `options.data` (Supabase user metadata), not
+ * just passed to the caller — the `handle_new_auth_user` trigger (see
+ * supabase/migrations) reads it back off the just-inserted `auth.users` row
+ * to seed `profiles.pending_demo_program_choice` at the moment the account
+ * is created, before any confirmation or session exists. That's what makes
+ * the intent survive email confirmation happening later, possibly on a
+ * different device — see providers/AuthProvider.tsx for where it's read.
+ */
+export async function signUpWithEmail(email: string, password: string, fromDemo?: boolean): Promise<SignUpResult> {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { pending_demo_program_choice: fromDemo === true } },
+  });
   if (error) throw error;
   if (!data.session) {
     // Confirmed account creation with email confirmation required (this

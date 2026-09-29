@@ -8,6 +8,7 @@ import {
 } from "../lib/supabase/auth";
 import { supabase } from "../lib/supabase/client";
 import { cloneBuiltInProgram, setSelectedProgramId } from "../lib/repositories/programRepository";
+import { getPendingDemoProgramChoice, setPendingDemoProgramChoice } from "../lib/repositories/userRepository";
 import { SEED_PROGRAM_ID } from "../data/programmeCatalogue";
 
 /**
@@ -36,12 +37,21 @@ interface AuthContextValue {
    * `fromDemo` marks a signup that should be followed by the "Use this
    * programme" / "Start fresh" choice (CORE_IMPLEMENTATION_PLAN.md Stage 4)
    * rather than dropping straight into the app — see `pendingProgramChoice`.
+   * Persisted on the account itself (`profiles.pending_demo_program_choice`),
+   * not just in-memory, so the choice still surfaces even if it takes
+   * confirming an email and signing in again, possibly much later, to
+   * actually get a session.
    */
   signUp: (email: string, password: string, fromDemo?: boolean) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   retry: () => void;
-  /** True only for the brief window between a demo-originated signup succeeding and the person resolving the programme choice. */
+  /**
+   * True whenever the signed-in account still owes the "Use this programme"
+   * / "Start fresh" choice — checked from the persisted flag every time a
+   * session appears (signUp, signIn, or session restoration on a cold
+   * start), not just right after a demo-originated signup.
+   */
   pendingProgramChoice: boolean;
   resolveProgramChoice: (choice: "use_programme" | "start_fresh") => Promise<void>;
 }
@@ -60,8 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("loading");
     setErrorMessage(undefined);
     restoreExistingSession()
-      .then((userId) => {
+      .then(async (userId) => {
+        // Covers the cold-start / reopen case: a demo-originated signup
+        // that only completed its email confirmation after the app was
+        // last closed still needs this checked here, not just at the
+        // original signUp()/signIn() call sites — this is often how that
+        // choice is actually first detected. Resolved before either
+        // setState call, not after setHasSession alone, so both update in
+        // the same render — otherwise the real app would flash on screen
+        // for a beat before the choice prompt replaced it.
+        const pending = userId !== null ? await getPendingDemoProgramChoice() : false;
         setHasSession(userId !== null);
+        setPendingProgramChoice(pending);
         setStatus("ready");
       })
       .catch((error: unknown) => {
@@ -92,15 +112,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const exitDemo = useCallback(() => setPreAuthView("logged_out"), []);
 
   const signUp = useCallback(async (email: string, password: string, fromDemo?: boolean): Promise<SignUpResult> => {
-    const result = await signUpWithEmail(email, password);
+    // `fromDemo` only ever controls what gets written onto the account here
+    // (via signUpWithEmail's user metadata, read by the `profiles` trigger —
+    // see supabase/migrations and lib/supabase/auth.ts). Whether to actually
+    // show the choice is decided uniformly below, from that same persisted
+    // flag, the same way signIn() and session restoration decide it — so a
+    // signup that gets a session immediately and one that only gets it much
+    // later (after confirming and signing in separately) end up showing the
+    // prompt through the exact same path, not two different mechanisms that
+    // could drift apart.
+    const result = await signUpWithEmail(email, password, fromDemo);
     if (result.status === "signed_in") {
+      // Resolved before setHasSession — see checkExistingSession's own
+      // comment for why the ordering avoids a real app flash.
+      const pending = await getPendingDemoProgramChoice();
       setHasSession(true);
-      // Only reachable when confirmation isn't required — a session exists
-      // immediately. If confirmation is required, there's no session to act
-      // on until the person confirms and signs in separately later, so the
-      // choice is skipped rather than deferred indefinitely (see
-      // IMPLEMENTATION_REPORT.md for this documented, deliberate limit).
-      if (fromDemo) setPendingProgramChoice(true);
+      setPendingProgramChoice(pending);
     }
     return result;
   }, []);
@@ -110,12 +137,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cloned = await cloneBuiltInProgram(SEED_PROGRAM_ID);
       await setSelectedProgramId(cloned.program.id);
     }
+    // Persisted, not just local: without this, signing out and back in (or
+    // simply reopening the app) before the DB were updated would show the
+    // prompt again even though it was already resolved.
+    await setPendingDemoProgramChoice(false);
     setPendingProgramChoice(false);
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     await signInWithEmail(email, password);
+    const pending = await getPendingDemoProgramChoice();
     setHasSession(true);
+    setPendingProgramChoice(pending);
   }, []);
 
   const signOut = useCallback(async () => {

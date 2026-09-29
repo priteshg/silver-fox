@@ -21,27 +21,35 @@ Feature: Trying PrimeForm before creating an account
 
   Rule: Someone who likes the demo programme can create an account and keep it
 
-    @signupgap
-    # "Create an account" only reaches the "Keep the demo programme?" screen
-    # after signUpWithEmail() returns status "signed_in" — but this
-    # project's Supabase has email confirmation enabled (see
-    # lib/supabase/auth.ts's SignUpResult doc comment), so a real UI signup
-    # always returns "confirmation_required" instead. Not reachable by an
-    # automated run without a way to confirm a real email inline.
-    Scenario: Choosing to use the demo programme
+    # "Create an account" from Demo always hits this project's real, enabled
+    # email confirmation requirement (see lib/supabase/auth.ts's
+    # SignUpResult doc comment), so "Keep the demo programme?" can only
+    # genuinely appear once the person has confirmed their email and signed
+    # in again — sometimes much later, possibly after closing the app
+    # entirely. That intent is persisted on the account itself
+    # (profiles.pending_demo_program_choice — see
+    # providers/AuthProvider.tsx and supabase/migrations), not local state,
+    # specifically so it survives that gap. e2e/steps/demo_experience.steps.ts
+    # uses the Admin API only to stand in for clicking the emailed
+    # confirmation link; every other step drives the real screens.
+    Scenario: Choosing to use the demo programme after confirming by email
       Given I am looking at the demo
-      When I create an account and choose to use this programme
+      When I create an account from the demo
+      Then I am asked to check my email to confirm my account
+      When I confirm my email and sign in
+      Then I am asked whether to keep the demo programme
+      When I choose to use this programme
       Then my new account follows the same programme the demo showed
       And none of the demo's example workouts or progress appear in my account
+      And I am not asked about the demo programme again
 
   Rule: Someone can create an account from the demo without keeping anything from it
 
-    @signupgap
-    # Same as "Choosing to use the demo programme" above — needs a signup
-    # that actually completes with a session, which this project's enabled
-    # email confirmation requirement blocks for an automated run.
     Scenario: Starting fresh instead of keeping the demo programme
       Given I am looking at the demo
-      When I create an account and choose to start fresh
+      When I create an account from the demo
+      And I confirm my email and sign in
+      Then I am asked whether to keep the demo programme
+      When I choose to start fresh
       Then my new account has no programme selected yet
       And none of the demo's example workouts or progress appear in my account

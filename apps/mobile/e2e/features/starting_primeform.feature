@@ -13,11 +13,12 @@ Feature: Starting PrimeForm
 
   Rule: Creating an account is how someone starts using PrimeForm for real
 
-    @signupgap
-    # Needs signUpWithEmail() to return "signed_in", which requires email
-    # confirmation to be disabled — this project has it enabled (see
-    # lib/supabase/auth.ts's SignUpResult doc comment), so a real UI signup
-    # never completes with a session in an automated run.
+    # Real signup form, then the Admin API stands in for clicking the
+    # emailed confirmation link (this project has email confirmation
+    # enabled — see lib/supabase/auth.ts's SignUpResult doc comment; no
+    # browser-only run can click a real inbox link), then the real Sign In
+    # screen — see e2e/steps/starting_primeform.steps.ts and
+    # e2e/support/adminAuth.ts.
     Scenario: Creating an account
       Given I have never used PrimeForm before
       When I create an account
@@ -26,12 +27,10 @@ Feature: Starting PrimeForm
 
   Rule: Someone with an account can sign in on this device
 
-    @signupgap
-    # Needs a real, already-confirmed email+password account to sign in
-    # with — this suite has no such fixture account (creating one hits the
-    # same email-confirmation block as "Creating an account" above), and
-    # using the actual project maintainer's own real account would not be a
-    # disposable test fixture.
+    # The fixture account is minted directly via the Admin API (a real,
+    # disposable, already-confirmed account — see e2e/support/adminAuth.ts),
+    # not the project maintainer's own account; the sign-in itself drives
+    # the real screen.
     Scenario: Signing in
       Given I already have a PrimeForm account
       When I sign in

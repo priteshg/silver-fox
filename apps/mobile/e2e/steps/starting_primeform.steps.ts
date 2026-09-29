@@ -1,17 +1,29 @@
 import { createBdd } from "playwright-bdd";
 import { expect, test } from "../fixtures/bddFixtures";
+import {
+  confirmTestAccountEmail,
+  createConfirmedTestAccount,
+  deleteTestAccountByEmail,
+  getAdminClient,
+  TEST_ACCOUNT_PASSWORD,
+  uniqueTestEmail,
+} from "../support/adminAuth";
 
 const { Given, When, Then, After } = createBdd(test);
 
-// "Creating an account" and "Signing in" are tagged @signupgap — see
-// starting_primeform.feature's own comments above each.
-
 const CREATED_PROGRAMME_NAME = "Strength 3 Days";
+const FIXTURE_ACCOUNT_PROGRAMME_NAME = "My Own Programme";
 
-After(async ({ cleanupSupabaseAsTestUser }) => {
+After(async ({ cleanupSupabaseAsTestUser, scenarioState }) => {
   const supabase = await cleanupSupabaseAsTestUser();
-  if (!supabase) return;
-  await supabase.from("programs").delete().eq("name", CREATED_PROGRAMME_NAME);
+  if (supabase) await supabase.from("programs").delete().eq("name", CREATED_PROGRAMME_NAME);
+  // "Creating an account" and "Signing in" each mint a real, disposable
+  // Supabase Auth account via the Admin API (see e2e/support/adminAuth.ts)
+  // — deleting it cascades to its profile and any programmes it owns (see
+  // supabase/migrations' `on delete cascade` FKs), so this alone is
+  // complete cleanup for those.
+  const email = scenarioState.adminCreatedAccountEmail as string | undefined;
+  if (email) await deleteTestAccountByEmail(email);
 });
 
 // "Given I have never used PrimeForm before" is registered once, in
@@ -135,4 +147,96 @@ Then("I am told PrimeForm could not connect", async ({ page }) => {
 
 Then("I am offered a way to try again", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Try Again" })).toBeVisible();
+});
+
+When("I create an account", async ({ page, scenarioState }) => {
+  const email = uniqueTestEmail("create_account");
+  scenarioState.adminCreatedAccountEmail = email;
+
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_ACCOUNT_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText("Check your email")).toBeVisible({ timeout: 10_000 });
+
+  // Confirmation-required is this project's real, deliberate Supabase Auth
+  // setting (see lib/supabase/auth.ts's SignUpResult doc comment) — no
+  // browser-only run can click a real emailed link, so the Admin API
+  // stands in for exactly that one step. Everything else — creating the
+  // account, and now signing into it — goes through the real screens, the
+  // same as a genuine person who has just confirmed their email would do.
+  await confirmTestAccountEmail(email);
+
+  await page.getByRole("button", { name: "Back to sign in" }).click();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_ACCOUNT_PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText("Your Training Week")).toBeVisible({ timeout: 10_000 });
+});
+
+Then("I can use the application", async ({ page }) => {
+  await expect(page.getByText("Your Training Week")).toBeVisible();
+});
+
+Then("my training data belongs only to me", async ({ programmesPage, supabaseAsTestUser }) => {
+  // Create something real under this brand-new account, then confirm it's
+  // owned by this account's own id — the concrete, checkable meaning of
+  // "belongs only to me" under this schema's RLS (see
+  // supabase/migrations/20260918213639_programs.sql's owner_id policies).
+  await programmesPage.open();
+  await programmesPage.startCreating();
+  await programmesPage.fillName(FIXTURE_ACCOUNT_PROGRAMME_NAME);
+  await programmesPage.createProgramme();
+  await programmesPage.waitForDetailReady();
+
+  const supabase = await supabaseAsTestUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: program } = await supabase.from("programs").select("owner_id").eq("name", FIXTURE_ACCOUNT_PROGRAMME_NAME).single();
+  expect(program!.owner_id).toBe(user!.id);
+});
+
+Given("I already have a PrimeForm account", async ({ scenarioState }) => {
+  const email = uniqueTestEmail("sign_in");
+  scenarioState.adminCreatedAccountEmail = email;
+  scenarioState.fixtureAccountEmail = email;
+
+  // Minted directly, not via the real signup screens — this scenario's own
+  // precondition is "already has an account", not the act of creating one
+  // (that's "Creating an account", above).
+  const userId = await createConfirmedTestAccount(email, TEST_ACCOUNT_PASSWORD);
+
+  // A distinguishing piece of this account's own data for "Then I see my
+  // own training data" to check for — created via the admin client since
+  // there's no browser session for this account yet at Given-time.
+  const admin = getAdminClient();
+  const { error } = await admin.from("programs").insert({
+    id: `e2e_fixture_${userId}`,
+    owner_id: userId,
+    name: FIXTURE_ACCOUNT_PROGRAMME_NAME,
+    is_custom: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+});
+
+When("I sign in", async ({ page, scenarioState }) => {
+  const email = scenarioState.fixtureAccountEmail as string;
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload();
+  await expect(page.getByText("PrimeForm", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_ACCOUNT_PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText("Your Training Week")).toBeVisible({ timeout: 10_000 });
+});
+
+Then("I see my own training data", async ({ programmesPage }) => {
+  await programmesPage.open();
+  await expect(programmesPage.viewButton(FIXTURE_ACCOUNT_PROGRAMME_NAME)).toBeVisible({ timeout: 10_000 });
 });

@@ -48,12 +48,12 @@ const bddTestDir = defineBddConfig({
   // Scenarios tagged @webgap are real, documented gaps — mostly Alert.alert
   // being a no-op on react-native-web (see e2e/journeys/delete-workflows.spec.ts)
   // — not missing step definitions. @specmismatch means the scenario's own
-  // numbers contradict the real implementation. @signupgap means the
-  // scenario needs a signup that actually completes with a session, which
-  // this project's enabled email confirmation requirement blocks for an
-  // automated run. All three excluded here rather than given fake or
-  // silently-wrong steps.
-  tags: "not @webgap and not @specmismatch and not @signupgap",
+  // numbers contradict the real implementation. Both excluded here rather
+  // than given fake or silently-wrong steps. (No scenario currently needs
+  // @signupgap — every signup-dependent scenario now drives the real
+  // screens, using the Admin API only to stand in for clicking an emailed
+  // confirmation link — see e2e/support/adminAuth.ts.)
+  tags: "not @webgap and not @specmismatch",
 });
 
 /**

@@ -2,7 +2,7 @@ import type { ProgramId } from "@silver-fox/types";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetFakeDb } from "../../../test/fakeSupabase";
 import { fakeSupabaseDb, TEST_USER_ID } from "../../../vitest.setup";
-import { getProfile, setActiveProgramId, updateProfile } from "../userRepository";
+import { getPendingDemoProgramChoice, getProfile, setActiveProgramId, setPendingDemoProgramChoice, updateProfile } from "../userRepository";
 
 const now = "2026-01-01T00:00:00.000Z";
 
@@ -23,6 +23,7 @@ describe("userRepository", () => {
         preferred_training_days_per_week: null,
         available_equipment: null,
         active_program_id: null,
+        pending_demo_program_choice: false,
         created_at: now,
         updated_at: now,
       },
@@ -60,5 +61,17 @@ describe("userRepository", () => {
     await setActiveProgramId("program_custom_1" as ProgramId);
     const profile = await getProfile();
     expect(profile.activeProgramId).toBe("program_custom_1");
+  });
+
+  it("defaults the pending demo programme choice to false", async () => {
+    expect(await getPendingDemoProgramChoice()).toBe(false);
+  });
+
+  it("persists and clears the pending demo programme choice", async () => {
+    await setPendingDemoProgramChoice(true);
+    expect(await getPendingDemoProgramChoice()).toBe(true);
+
+    await setPendingDemoProgramChoice(false);
+    expect(await getPendingDemoProgramChoice()).toBe(false);
   });
 });
